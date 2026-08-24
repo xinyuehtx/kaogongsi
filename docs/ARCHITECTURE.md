@@ -1,15 +1,16 @@
 # 项目架构文档（L2，随迭代更新）
 
-> 归因决策机的实现架构。对应总 RFC：`~/Documents/docs/e2e-evals/rfc/RFC.md`。
-> 本文档随每个需求迭代更新。最后更新：需求 001 完成（2026-08-24）。
+> 考功司（户部下属评定官员绩效之司→隐喻 Agent 绩效考评）的实现架构。对应总 RFC：`.context/rfc/RFC.md`。
+> 本文档随每个需求迭代更新。最后更新：需求 002 完成。
 
 ## 1. 六层 + 五契约（层间隔离）
 
 每层是独立包，**只依赖下层的稳定契约**（`@kaogongsi/contracts`），可独立测试、独立存活。契约缝 = 换实现不换契约、上层无感（D9.2 / A6 / D3）。
 
 ```
-L6 呈现/路由   apps/web (ExecDashboard) + packages/l6-report
-      ▲ 契约④ ReportView / DecisionRecord
+L6 呈现/路由   apps/web (AppShell/ExecDashboard/ComparisonReport)
+               + packages/l6-report + packages/l6-compare + packages/report-llm
+      ▲ 契约④ ReportView / DecisionRecord / ComparisonView / ComparativeNarrative
 L5 决策        (待建)
       ▲ 契约③ AttributionResult
 L4 归因        (待建)
@@ -21,18 +22,26 @@ L2 证据/血缘   (待建)
 L1 接入/适配   packages/connector-mock (MockConnector) + 未来 BI/Langfuse/L5 连接器
 ```
 
-## 2. 已实现（截至需求 001）
+## 2. 已实现（截至需求 002）
 
 | 包 | 角色 | 状态 |
 |---|---|---|
-| `@kaogongsi/contracts` | 五道契约缝 + KPI 目录 + `DataConnector` 标准接口 | ✅ |
-| `@kaogongsi/connector-mock` | `MockConnector`（本阶段数据源实现）+ 可复用连接器契约测试 | ✅ |
+| `@kaogongsi/contracts` | 五道契约缝 + KPI 目录 + 项目/版本 + 对比契约 + `DataConnector`/`ReportGenerator` 端口 | ✅ |
+| `@kaogongsi/connector-mock` | `MockConnector`（多项目/多版本 fixture）+ 可复用连接器契约测试 | ✅ |
 | `@kaogongsi/l6-report` | `buildExecReportView`：DecisionRecord+KpiSet → exec ReportView | ✅ |
-| `apps/api` | Fastify；`GET /api/report/exec`（经注入连接器） | ✅ |
-| `apps/web` | 对上高管 Dashboard（连接器注册表 + 渲染时主动拉取） | ✅ |
-| `e2e` | Playwright；exec-dashboard 5 场景 | ✅ |
+| `@kaogongsi/l6-compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView（delta/方向/显著性） | ✅ |
+| `@kaogongsi/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
+| `apps/api` | Fastify；exec / projects / versions / version / compare 路由（注入连接器 + 生成器） | ✅ |
+| `apps/web` | Tailwind UI：项目/版本选择 + 单版本报告 + 双版本对比 + 生成对比报告 + 深浅色 | ✅ |
+| `e2e` | Playwright；exec-dashboard(5) + project-version-compare(4) 共 9 场景 | ✅ |
 
 **待建**：L1 真实连接器（BI/Langfuse/L5）、L2 血缘、L3 计算、L4 归因、L5 决策。
+
+## 2b. 新增契约缝（RFC-002）
+
+- **项目/版本**：`ProjectSummary` / `VersionSummary` / `VersionReport`；`DataConnector` 增 `listProjects/listVersions/fetchVersionReport`。
+- **对比（L6）**：`MetricDelta` / `ComparisonGroup` / `ComparisonView`（A4：带方向+显著性；诊断非门禁）。
+- **LLM 出口端口（D3）**：`ReportGenerator` + `ComparativeNarrative`；默认离线模板，env 配齐切真实模型（`KAOGONGSI_LLM_*`）。
 
 ## 3. 连接器模式（D9.2 的读侧落地）
 
@@ -57,3 +66,4 @@ L1 接入/适配   packages/connector-mock (MockConnector) + 未来 BI/Langfuse/
 | 需求 | RFC | Story | 状态 |
 |---|---|---|---|
 | 001 对上高管 Dashboard | `docs/rfcs/RFC-001-exec-dashboard.md` | `docs/stories/US-001-exec-dashboard.md` | ✅ 完成 |
+| 002 项目-版本评测报告与对比 | `docs/rfcs/RFC-002-project-version-compare.md` | `docs/stories/US-002-project-version-compare.md` | ✅ 完成 |
