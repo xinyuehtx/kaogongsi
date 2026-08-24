@@ -1,11 +1,8 @@
-import type { AttributionResult, Kpi, ReportView } from '@kaogongsi/contracts';
+import type { Kpi, ReportView } from '@kaogongsi/contracts';
 import { useState } from 'react';
+import { AttributionBar, Card, GateBadge, SectionTitle } from './ui.js';
 
-const GATE_STYLE: Record<string, { bg: string; label: string }> = {
-  GO: { bg: '#16a34a', label: 'GO · 建议继续' },
-  NO_GO: { bg: '#dc2626', label: 'NO-GO · 建议放弃' },
-  ABSTAIN: { bg: '#d97706', label: 'ABSTAIN · 再等等' },
-};
+const TREND: Record<string, string> = { up: '↑', down: '↓', flat: '→' };
 
 function KpiCard({ kpi }: { kpi: Kpi }) {
   const breached = kpi.guardrailBreached === true;
@@ -13,31 +10,33 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
     <div
       data-testid={`kpi-${kpi.key}`}
       data-breached={breached ? 'true' : 'false'}
-      style={{
-        border: `1px solid ${breached ? '#dc2626' : '#e5e7eb'}`,
-        background: breached ? '#fef2f2' : '#fff',
-        borderRadius: 8,
-        padding: '10px 14px',
-        minWidth: 140,
-      }}
+      className={`min-w-36 flex-1 rounded-xl border px-3.5 py-3 ${
+        breached ? 'border-critical bg-critical/10' : 'border-hairline bg-surface'
+      }`}
     >
-      <div style={{ fontSize: 12, color: '#6b7280' }}>
-        {kpi.label}
-        {kpi.signalOnly ? <span data-testid="signal-only-tag"> · 信号非门禁</span> : null}
+      <div className="flex items-center gap-1 text-xs text-secondary">
+        <span>{kpi.label}</span>
+        {kpi.signalOnly ? (
+          <span data-testid="signal-only-tag" className="rounded-pill bg-warning/20 px-1.5 text-[10px] text-[#7a5200]">
+            信号非门禁
+          </span>
+        ) : null}
       </div>
-      <div style={{ fontSize: 20, fontWeight: 600, color: breached ? '#dc2626' : '#111' }}>
-        {kpi.value}
-        <span style={{ fontSize: 12, marginLeft: 2 }}>{kpi.unit}</span>
+      <div className={`mt-1 flex items-baseline gap-1 tnum ${breached ? 'text-critical' : 'text-primary'}`}>
+        <span className="text-2xl font-semibold">{kpi.value}</span>
+        <span className="text-xs text-muted">{kpi.unit}</span>
+        {kpi.trend ? <span className="ml-auto text-xs text-muted">{TREND[kpi.trend]}</span> : null}
       </div>
     </div>
   );
 }
 
-function KpiGroup({ name, title, items }: { name: string; title: string; items: Kpi[] }) {
+function KpiGroup({ name, title, items, hint }: { name: string; title: string; items: Kpi[]; hint?: string }) {
+  if (items.length === 0) return null;
   return (
-    <section data-testid={`kpi-group-${name}`} style={{ marginBottom: 16 }}>
-      <h3 style={{ fontSize: 14, margin: '8px 0' }}>{title}</h3>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+    <section data-testid={`kpi-group-${name}`} className="mb-4">
+      <SectionTitle hint={hint}>{title}</SectionTitle>
+      <div className="flex flex-wrap gap-2.5">
         {items.map((k) => (
           <KpiCard key={k.key} kpi={k} />
         ))}
@@ -46,35 +45,10 @@ function KpiGroup({ name, title, items }: { name: string; title: string; items: 
   );
 }
 
-function AttributionBar({ attribution }: { attribution: AttributionResult }) {
-  const color: Record<string, string> = { tech: '#2563eb', product: '#7c3aed', ops: '#0891b2' };
-  const zh: Record<string, string> = { tech: '技术', product: '产品', ops: '运营' };
-  return (
-    <section data-testid="attribution" style={{ marginBottom: 16 }}>
-      <h3 style={{ fontSize: 14, margin: '8px 0' }}>
-        归因分布 · 置信度 <span data-testid="attr-confidence">{attribution.confidence}</span>
-      </h3>
-      <div style={{ display: 'flex', height: 28, borderRadius: 6, overflow: 'hidden' }}>
-        {attribution.distribution.map((s) => (
-          <div
-            key={s.party}
-            data-testid={`attr-${s.party}`}
-            style={{ width: `${s.share * 100}%`, background: color[s.party], color: '#fff', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {zh[s.party]} {Math.round(s.share * 100)}%
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function ExecDashboard({ view }: { view: ReportView }) {
-  const [open, setOpen] = useState(false);
+  const [trajOpen, setTrajOpen] = useState(false);
   const gate = view.decision?.gate ?? 'ABSTAIN';
-  const style = GATE_STYLE[gate]!;
   const section = (title: string) => view.sections.find((s) => s.title === title);
-
   const kpi = (t: string) => (section(t)?.data as Kpi[]) ?? [];
   const traj = section('过程质量（诊断）')?.data as
     | { note: string; groups: { key: string; label: string; items: Kpi[] }[] }
@@ -84,67 +58,109 @@ export function ExecDashboard({ view }: { view: ReportView }) {
     | undefined;
 
   return (
-    <main style={{ fontFamily: 'system-ui', padding: 24, maxWidth: 980, margin: '0 auto' }}>
-      <h1 data-testid="app-title" style={{ fontSize: 20 }}>考公司 · 对上高管 Dashboard</h1>
-
-      <div
-        data-testid="gate-badge"
-        data-gate={gate}
-        style={{ background: style.bg, color: '#fff', padding: '12px 18px', borderRadius: 10, fontSize: 18, fontWeight: 700, display: 'inline-block', margin: '8px 0' }}
-      >
-        {style.label}
-      </div>
-      <p data-testid="recommendation" style={{ color: '#374151' }}>{view.decision?.recommendation}</p>
-
-      {!view.drillable && (
-        <div data-testid="not-drillable-notice" style={{ background: '#fffbeb', border: '1px solid #f59e0b', padding: '8px 12px', borderRadius: 8, color: '#92400e', margin: '8px 0' }}>
-          ⚠️ 低证据级（metric-only）：不可下钻，不可作为拍板唯一依据
+    <div className="flex flex-col gap-4">
+      {/* 结论头部 */}
+      <Card className="p-5">
+        <h2 data-testid="app-title" className="text-xs font-medium uppercase tracking-widest text-muted">
+          考功司 · 对上高管 Dashboard
+        </h2>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <GateBadge gate={gate} />
+          <p data-testid="recommendation" className="text-secondary">
+            {view.decision?.recommendation}
+          </p>
         </div>
-      )}
 
-      {view.decision && <AttributionBar attribution={view.decision.attribution} />}
+        {!view.drillable && (
+          <div
+            data-testid="not-drillable-notice"
+            className="mt-3 rounded-lg border border-warning bg-warning/10 px-3 py-2 text-sm text-[#7a5200]"
+          >
+            ⚠️ 低证据级（metric-only）：不可下钻，不可作为拍板唯一依据
+          </div>
+        )}
 
-      <KpiGroup name="quality" title="质量（成败结果）" items={kpi('质量')} />
-      <KpiGroup name="product" title="业务 / 产品" items={kpi('业务/产品')} />
-      <KpiGroup name="financial" title="财务" items={kpi('财务')} />
-      <KpiGroup name="guardrail" title="护栏（不能变差）" items={kpi('护栏')} />
+        {view.decision && (
+          <div className="mt-4">
+            <AttributionBar attribution={view.decision.attribution} />
+          </div>
+        )}
+      </Card>
 
+      {/* KPI 三本账 + 护栏 */}
+      <Card className="p-5">
+        <KpiGroup name="quality" title="质量（成败结果）" items={kpi('质量')} />
+        <KpiGroup name="product" title="业务 / 产品" items={kpi('业务/产品')} />
+        <KpiGroup name="financial" title="财务" items={kpi('财务')} />
+        <KpiGroup name="guardrail" title="护栏（不能变差）" items={kpi('护栏')} hint="破线标红即刻可见" />
+      </Card>
+
+      {/* 过程质量（诊断，可折叠） */}
       {traj && (
-        <section data-testid="trajectory-section" style={{ marginBottom: 16 }}>
-          <button data-testid="trajectory-toggle" onClick={() => setOpen((v) => !v)} style={{ cursor: 'pointer', padding: '6px 10px' }}>
-            过程质量（诊断，非打分） {open ? '▲' : '▼'}
-          </button>
-          <p style={{ fontSize: 12, color: '#6b7280' }}>{traj.note}</p>
-          {open &&
-            traj.groups.map((g) => <KpiGroup key={g.key} name={`traj-${g.key}`} title={g.label} items={g.items} />)}
-        </section>
+        <Card className="p-5">
+          <section data-testid="trajectory-section">
+            <button
+              data-testid="trajectory-toggle"
+              onClick={() => setTrajOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-lg px-1 py-1 text-left text-sm font-semibold text-secondary hover:text-primary"
+            >
+              <span>过程质量（诊断，非打分）</span>
+              <span className="text-muted">{trajOpen ? '▲' : '▼'}</span>
+            </button>
+            <p className="mt-1 text-xs text-muted">{traj.note}</p>
+            {trajOpen && (
+              <div className="mt-3">
+                {traj.groups.map((g) => (
+                  <KpiGroup key={g.key} name={`traj-${g.key}`} title={g.label} items={g.items} />
+                ))}
+              </div>
+            )}
+          </section>
+        </Card>
       )}
 
-      <section style={{ marginTop: 16 }}>
-        <button data-testid="rationale-toggle" onClick={() => setOpen((v) => !v)} style={{ display: 'none' }} />
-        <details data-testid="decision-rationale">
-          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>决策依据（assurance case）</summary>
+      {/* 决策依据（assurance case）+ 下钻 */}
+      <Card className="p-5">
+        <details data-testid="decision-rationale" open>
+          <summary className="cursor-pointer text-sm font-semibold text-secondary">
+            决策依据（assurance case）
+          </summary>
           {rationale && (
-            <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, marginTop: 6 }}>
-              <div><b>推荐：</b>{rationale.recommendation}</div>
-              <div><b>理由：</b>{rationale.rationale}</div>
-              <div><b>敏感性：</b>{rationale.sensitivity}</div>
-              <div data-testid="counter-evidence"><b>反对证据：</b>{rationale.counterEvidence}</div>
-              <div><b>假设：</b>{rationale.assumptions.join('；')}</div>
+            <div className="mt-3 space-y-1.5 text-sm leading-relaxed text-secondary">
+              <div>
+                <b className="text-primary">推荐：</b>
+                {rationale.recommendation}
+              </div>
+              <div>
+                <b className="text-primary">理由：</b>
+                {rationale.rationale}
+              </div>
+              <div>
+                <b className="text-primary">敏感性：</b>
+                {rationale.sensitivity}
+              </div>
+              <div data-testid="counter-evidence">
+                <b className="text-primary">反对证据：</b>
+                {rationale.counterEvidence}
+              </div>
+              <div>
+                <b className="text-primary">假设：</b>
+                {rationale.assumptions.join('；')}
+              </div>
             </div>
           )}
         </details>
-      </section>
 
-      <div style={{ marginTop: 12 }}>
-        <button
-          data-testid="drilldown-btn"
-          disabled={!view.drillable}
-          style={{ padding: '6px 12px', cursor: view.drillable ? 'pointer' : 'not-allowed', opacity: view.drillable ? 1 : 0.5 }}
-        >
-          查看证据（下钻）
-        </button>
-      </div>
-    </main>
+        <div className="mt-4">
+          <button
+            data-testid="drilldown-btn"
+            disabled={!view.drillable}
+            className="rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm text-secondary enabled:hover:border-tech enabled:hover:text-tech disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            查看证据（下钻）
+          </button>
+        </div>
+      </Card>
+    </div>
   );
 }

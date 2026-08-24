@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+/* 深浅色主题：由 <html data-theme="dark"> 切换，覆盖语义令牌即可整体换肤。 */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * 设计令牌 —— 取自 dataviz skill 的 validated 调色板（references/palette.md）。
+ * 组件只用语义类（bg-surface / text-secondary / text-tech …），换肤在此一处完成。
+ */
+@theme {
+  --color-plane: #f9f9f7; /* 页面底 */
+  --color-surface: #fcfcfb; /* 内容面 */
+  --color-card: #ffffff; /* 卡片 */
+  --color-primary: #0b0b0b; /* 主文字 */
+  --color-secondary: #52514e; /* 次文字 */
+  --color-muted: #898781; /* 轴/弱文字 */
+  --color-hairline: #e1e0d9; /* 分隔线 */
+  --color-baseline: #c3c2b7; /* 基线/边 */
+
+  /* 状态色（固定，不随主题；配 icon+label，绝不单靠颜色） */
+  --color-good: #0ca30c;
+  --color-good-text: #006300;
+  --color-warning: #fab219;
+  --color-serious: #ec835a;
+  --color-critical: #d03b3b;
+
+  /* 归因三责任方（categorical slot 1/2/3，all-pairs 通过） */
+  --color-tech: #2a78d6;
+  --color-product: #eb6834;
+  --color-ops: #1baf7a;
+
+  --radius-card: 14px;
+  --radius-pill: 9999px;
+}
+
+[data-theme='dark'] {
+  --color-plane: #0d0d0d;
+  --color-surface: #1a1a19;
+  --color-card: #232321;
+  --color-primary: #ffffff;
+  --color-secondary: #c3c2b7;
+  --color-muted: #898781;
+  --color-hairline: #2c2c2a;
+  --color-baseline: #383835;
+
+  --color-good: #0ca30c;
+  --color-good-text: #0ca30c;
+  --color-warning: #fab219;
+  --color-serious: #ec835a;
+  --color-critical: #d03b3b;
+
+  --color-tech: #3987e5;
+  --color-product: #d95926;
+  --color-ops: #199e70;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-plane);
+  color: var(--color-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 数字对齐（KPI 值、delta 列） */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

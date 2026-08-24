@@ -164,7 +164,13 @@ export interface LlmEnv {
   KAOGONGSI_LLM_MODEL?: string;
 }
 
-export function createReportGenerator(env: LlmEnv = process.env as LlmEnv): ReportGenerator {
+/** 读取运行时 env，不依赖 @types/node（浏览器与 Node 均可）。 */
+function defaultEnv(): LlmEnv {
+  const g = globalThis as { process?: { env?: Record<string, string | undefined> } };
+  return (g.process?.env ?? {}) as LlmEnv;
+}
+
+export function createReportGenerator(env: LlmEnv = defaultEnv()): ReportGenerator {
   const baseUrl = env.KAOGONGSI_LLM_BASE_URL;
   const apiKey = env.KAOGONGSI_LLM_API_KEY;
   const model = env.KAOGONGSI_LLM_MODEL;
