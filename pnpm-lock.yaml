@@ -134,6 +134,22 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)
 
+  packages/report-llm:
+    dependencies:
+      '@kaogongsi/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@kaogongsi/l6-compare':
+        specifier: workspace:*
+        version: link:../l6-compare
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)
+
 packages:
 
   '@babel/code-frame@7.29.7':
