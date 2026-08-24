@@ -29,6 +29,10 @@ export interface CanonicalSignal {
   experimentId: string;
   harnessConfigVersion: string; // A2：harness 一等公民，版本化
   evidenceLevel: EvidenceLevel;
+  // 归一化观测（RFC-004）：任何来源都把"某指标的一次观测"归一到此。
+  metricKey?: string; // 该信号归属的指标
+  observation?: number; // 数值观测（case-based：1/0；aggregate：指标值）
+  verdict?: 'pass' | 'partial' | 'fail' | 'unknown'; // case-based 判定
   evidence: {
     trajectoryEvents?: unknown[]; // 轨迹事件（带 parentId 因果链），L2 细化
     artifacts?: unknown[];
@@ -181,6 +185,121 @@ export interface VersionEvaluation {
   bundles: MetricCaseBundle[]; // 指标 + 支撑案例 + 血缘（D9.3）
 }
 
+/**
+ * 单个版本的**原始归一化信号**（契约⓪ Canonical Signal Model）——连接器(L1)的真实产物。
+ * L2 据此建血缘图、L3 据此算指标。任何来源（执行器/BI/评测平台）都归一到 CanonicalSignal。
+ */
+export interface VersionSignals {
+  version: VersionSummary;
+  signals: CanonicalSignal[];
+}
+
+// ─────────────────────────────────────────────────────────────
+// 指标目录（共享词汇，RFC-004）—— 各层对"指标是什么"的单一事实源。
+// L3 据此把计算值归位到 KpiSet；连接器据此生成信号；L4 据此归责。
+// ─────────────────────────────────────────────────────────────
+export type MetricGroup =
+  | 'quality'
+  | 'product'
+  | 'financial'
+  | 'guardrail'
+  | 'efficiency'
+  | 'decisionQuality'
+  | 'planningQuality'
+  | 'interactionQuality'
+  | 'stability';
+
+export interface MetricDef {
+  key: string;
+  label: string;
+  unit: string;
+  group: MetricGroup;
+  betterWhen: 'higher' | 'lower';
+  caseBased?: boolean; // true=逐实例判定（可下钻到案例），false=聚合读数（BI 式）
+  diagnostic?: boolean; // 过程质量：诊断非门禁（D11/A1）
+  signalOnly?: boolean;
+  guardrailThreshold?: number; // 护栏阈值：越界即破线（A8）
+  target?: number; // 归因用目标线：低于/高于目标即视为欠缺
+  nSamples?: number; // case-based 默认样本量
+}
+
+const TRAJ_GROUPS: MetricGroup[] = [
+  'efficiency',
+  'decisionQuality',
+  'planningQuality',
+  'interactionQuality',
+  'stability',
+];
+
+/** 该指标是否属于过程质量（轨迹级五类）。 */
+export function isTrajectoryGroup(g: MetricGroup): boolean {
+  return TRAJ_GROUPS.includes(g);
+}
+
+export const METRIC_CATALOG: MetricDef[] = [
+  // 质量（成败结果）
+  { key: 'success_rate', label: '任务成功率', unit: '%', group: 'quality', betterWhen: 'higher', caseBased: true, target: 70, nSamples: 100 },
+  { key: 'pass_hat_k', label: 'pass^k 可靠性', unit: '%', group: 'quality', betterWhen: 'higher', caseBased: true, target: 20, nSamples: 100 },
+  { key: 'regressions', label: '回归掉的用例', unit: '个', group: 'quality', betterWhen: 'lower', target: 3 },
+  // 业务 / 产品
+  { key: 'adoption', label: '采用率', unit: '%', group: 'product', betterWhen: 'higher', target: 35 },
+  { key: 'retention_30d', label: '30 日留存', unit: '%', group: 'product', betterWhen: 'higher', target: 45 },
+  { key: 'csat', label: '满意度(点赞率)', unit: '%', group: 'product', betterWhen: 'higher', target: 85 },
+  { key: 'task_volume', label: '任务量', unit: '次/日', group: 'product', betterWhen: 'higher', target: 10000 },
+  { key: 'containment', label: '自足完成率', unit: '%', group: 'product', betterWhen: 'higher', target: 75 },
+  // 财务
+  { key: 'cost_of_pass', label: 'Cost-of-Pass', unit: 'USD', group: 'financial', betterWhen: 'lower', target: 0.2 },
+  { key: 'roi', label: 'ROI', unit: '%', group: 'financial', betterWhen: 'higher', target: 120 },
+  { key: 'cost_quality', label: '成本-质量比', unit: 'USD/%', group: 'financial', betterWhen: 'lower', target: 0.28 },
+  // 护栏（含阈值）
+  { key: 'hallucination', label: '幻觉率', unit: '%', group: 'guardrail', betterWhen: 'lower', caseBased: true, target: 5, guardrailThreshold: 5, nSamples: 100 },
+  { key: 'refusal', label: '拒答率', unit: '%', group: 'guardrail', betterWhen: 'lower', caseBased: true, target: 8, guardrailThreshold: 10, nSamples: 100 },
+  { key: 'safety_violation', label: '安全违规率', unit: '%', group: 'guardrail', betterWhen: 'lower', target: 1, guardrailThreshold: 1 },
+  { key: 'latency_p95', label: 'P95 延迟', unit: 'min', group: 'guardrail', betterWhen: 'lower', target: 30, guardrailThreshold: 35 },
+  // 过程质量 · 效率（诊断）
+  { key: 'steps_to_success', label: 'Steps to Success', unit: '步', group: 'efficiency', betterWhen: 'lower', diagnostic: true },
+  { key: 'token_efficiency', label: 'Token Efficiency', unit: 'tok/任务', group: 'efficiency', betterWhen: 'lower', diagnostic: true },
+  { key: 'tool_utilization', label: 'Tool Utilization(成功率)', unit: '%', group: 'efficiency', betterWhen: 'higher', diagnostic: true },
+  // 过程质量 · 决策质量（诊断）
+  { key: 'right_tool_rate', label: 'Right Tool Rate', unit: '%', group: 'decisionQuality', betterWhen: 'higher', diagnostic: true, signalOnly: true },
+  { key: 'redundant_call_rate', label: 'Redundant Call Rate', unit: '%', group: 'decisionQuality', betterWhen: 'lower', diagnostic: true },
+  { key: 'recovery_rate', label: 'Recovery Rate', unit: '%', group: 'decisionQuality', betterWhen: 'higher', diagnostic: true },
+  // 过程质量 · 规划质量（诊断）
+  { key: 'plan_coherence', label: 'Plan Coherence', unit: '%', group: 'planningQuality', betterWhen: 'higher', diagnostic: true },
+  { key: 'plan_adaptation', label: 'Plan Adaptation', unit: '%', group: 'planningQuality', betterWhen: 'higher', diagnostic: true },
+  { key: 'goal_preservation', label: 'Goal Preservation', unit: '%', group: 'planningQuality', betterWhen: 'higher', diagnostic: true },
+  // 过程质量 · 交互质量（诊断）
+  { key: 'clarification_necessity', label: 'Clarification Necessity', unit: '%', group: 'interactionQuality', betterWhen: 'higher', diagnostic: true },
+  { key: 'information_density', label: 'Information Density', unit: '比', group: 'interactionQuality', betterWhen: 'higher', diagnostic: true },
+  { key: 'user_effort', label: 'User Effort', unit: '次', group: 'interactionQuality', betterWhen: 'lower', diagnostic: true },
+  // 过程质量 · 稳定性（诊断）
+  { key: 'variance_across_runs', label: 'Variance across Runs', unit: 'σ', group: 'stability', betterWhen: 'lower', diagnostic: true },
+  { key: 'failure_cascade', label: 'Failure Cascade', unit: '%', group: 'stability', betterWhen: 'lower', diagnostic: true },
+];
+
+export const METRIC_BY_KEY: Record<string, MetricDef> = Object.fromEntries(
+  METRIC_CATALOG.map((m) => [m.key, m]),
+);
+
+// ─────────────────────────────────────────────────────────────
+// 契约① Provenance 查询 API —— L2→L3，证据图投影（可按指标/案例下钻）
+// ─────────────────────────────────────────────────────────────
+export interface ProvenanceCase {
+  caseId: string;
+  metricKey: string;
+  verdict: 'pass' | 'partial' | 'fail' | 'unknown';
+  observation: number;
+  evidenceRef: string;
+  lineage: string[];
+  source: string;
+}
+
+export interface ProvenanceQuery {
+  metricKeys(): string[];
+  casesForMetric(metricKey: string): ProvenanceCase[];
+  drilldown(caseId: string): ProvenanceCase | undefined;
+}
+
 // ─────────────────────────────────────────────────────────────
 // 版本对比契约（RFC-002）—— L6 对比视图
 // A4：对比必带方向 + 显著性，不做裸分对比。
@@ -263,13 +382,10 @@ export interface DataConnector {
   capabilities(): ConnectorCapabilities;
   fetchDecision(query: ReportQuery): Promise<DecisionRecord>;
   fetchKpis(query: ReportQuery): Promise<KpiSet>;
-  // RFC-002/003：按「项目 → 版本」组织评测报告与对比。
+  // RFC-002/003/004：按「项目 → 版本」组织。连接器只取**原始信号**（契约⓪），
+  // 血缘(L2)/指标(L3)/归因(L4)/决策(L5) 由各自引擎从信号计算。
   listProjects(): Promise<ProjectSummary[]>;
   listVersions(projectId: string): Promise<VersionSummary[]>;
-  /**
-   * 取某版本的原始评测证据（契约②级）。连接器只取证据，不做归因/决策；
-   * 归因(L4)与决策(L5)由各自引擎从此计算（RFC-003）。
-   */
-  fetchEvaluation(projectId: string, versionId: string): Promise<VersionEvaluation>;
+  fetchSignals(projectId: string, versionId: string): Promise<VersionSignals>;
 }
 
