@@ -1,0 +1,26 @@
+{
+  "name": "kaogongsi",
+  "version": "0.0.0",
+  "private": true,
+  "description": "端到端 Agent 评测框架 —— 归因决策机（monorepo）",
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build --filter=!@kaogongsi/e2e",
+    "test": "turbo run test --filter=!@kaogongsi/e2e",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck --filter=!@kaogongsi/e2e",
+    "dev": "turbo run dev --filter=!@kaogongsi/e2e",
+    "e2e": "pnpm --filter @kaogongsi/e2e test"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
