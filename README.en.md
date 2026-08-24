@@ -34,12 +34,14 @@ Every layer is an independent package depending only on the **stable contracts**
 | Layer | Package | Upper-edge contract |
 |---|---|---|
 | L6 Presentation/Routing | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 Decision | *(planned)* | AttributionResult |
-| L4 Attribution | *(planned)* | MetricCaseBundle |
-| L3 Compute | *(planned)* | Provenance query |
-| L2 Evidence/Lineage | *(planned)* | CanonicalSignal |
+| L5 Decision | `packages/l5-decision` | AttributionResult |
+| L4 Attribution | `packages/l4-attribution` | MetricCaseBundle |
+| L3 Compute | `packages/l3-metrics` | Provenance query |
+| L2 Evidence/Lineage | `packages/l2-provenance` | CanonicalSignal |
 | L1 Ingest/Adapt | `packages/connector-mock` (+ future BI/Langfuse/L5) | — |
-| Contracts (cross-cutting) | `packages/contracts` | the five seam types |
+| Contracts (cross-cutting) | `packages/contracts` | the five seam types + metric catalog |
+
+> **All six layers are wired**: `fetchSignals(L1)` → `provenance(L2)` → `trustworthy metrics(L3, with bootstrap CI)` → `attribution(L4)` → `decision(L5)` → `report(L6)`.
 
 > **Pluggable data source:** `DataConnector` is the read-side seam; MockConnector is just the first implementation. Wiring a real BI/Langfuse/eval platform = a new connector, zero view changes.
 > **Swappable LLM:** `ReportGenerator` is the model-gateway port — offline template by default, real model via env.

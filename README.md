@@ -34,12 +34,14 @@
 | 层 | 包 | 契约（上缘） |
 |---|---|---|
 | L6 呈现/路由 | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 决策 | *(待建)* | AttributionResult |
-| L4 归因 | *(待建)* | MetricCaseBundle |
-| L3 计算 | *(待建)* | Provenance 查询 |
-| L2 证据/血缘 | *(待建)* | CanonicalSignal |
+| L5 决策 | `packages/l5-decision` | AttributionResult |
+| L4 归因 | `packages/l4-attribution` | MetricCaseBundle |
+| L3 计算 | `packages/l3-metrics` | Provenance 查询 |
+| L2 证据/血缘 | `packages/l2-provenance` | CanonicalSignal |
 | L1 接入/适配 | `packages/connector-mock`（+ 未来 BI/Langfuse/L5） | — |
-| 契约（贯穿） | `packages/contracts` | 五道缝的类型定义 |
+| 契约（贯穿） | `packages/contracts` | 五道缝的类型定义 + 指标目录 |
+
+> **六层已贯通**：`fetchSignals(L1)` → `血缘(L2)` → `可信指标(L3，带 bootstrap 置信区间)` → `归因(L4)` → `决策(L5)` → `报告(L6)`。
 
 > **数据源可插拔**：`DataConnector` 是读侧隔离缝，MockConnector 只是第一个实现；接入真实 BI/Langfuse/评测平台＝新增一个连接器，视图零改动。
 > **LLM 可替换**：`ReportGenerator` 是模型出口端口，默认离线模板，配置 env 即切真实模型。

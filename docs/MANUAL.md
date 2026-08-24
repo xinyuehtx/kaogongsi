@@ -18,6 +18,8 @@ pnpm e2e              # Playwright 端到端
 
 # 单层独立测试（验证隔离）
 pnpm --filter @kaogongsi/contracts test
+pnpm --filter @kaogongsi/l2-provenance test
+pnpm --filter @kaogongsi/l3-metrics test
 pnpm --filter @kaogongsi/l4-attribution test
 pnpm --filter @kaogongsi/l5-decision test
 pnpm --filter @kaogongsi/l6-report test
