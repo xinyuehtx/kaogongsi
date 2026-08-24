@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { DataConnector, ReportGenerator } from '@kaogongsi/contracts';
+import { computeEvaluation } from '@kaogongsi/l3-metrics';
 import { assembleVersionReport, buildExecReportView } from '@kaogongsi/l6-report';
 import { buildComparison } from '@kaogongsi/l6-compare';
 import { MockConnector } from '@kaogongsi/connector-mock';
@@ -46,14 +47,14 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     return connector.listVersions(id);
   });
 
-  // 单版本报告：证据 → 归因(L4) → 决策(L5) → exec 视图
+  // 单版本报告：信号(L1) → 血缘(L2)+指标(L3) → 归因(L4) → 决策(L5) → exec 视图
   app.get('/api/report/version', async (req, reply) => {
     const { projectId, versionId } = req.query as { projectId?: string; versionId?: string };
     if (!projectId || !versionId) return reply.code(400).send({ error: '缺少 projectId 或 versionId' });
-    const evaluation = await connector.fetchEvaluation(projectId, versionId);
-    const report = assembleVersionReport(evaluation);
+    const { version, signals } = await connector.fetchSignals(projectId, versionId);
+    const report = assembleVersionReport(computeEvaluation(version, signals));
     return buildExecReportView(report.decision, report.kpis, {
-      drillable: drillableOf(evaluation.version.evidenceLevel),
+      drillable: drillableOf(version.evidenceLevel),
     });
   });
 
@@ -67,11 +68,13 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return reply.code(404).send({ error: `未找到项目: ${projectId}` });
 
-    const [baseEval, candEval] = await Promise.all([
-      connector.fetchEvaluation(projectId, baselineId),
-      connector.fetchEvaluation(projectId, candidateId),
+    const [base, cand] = await Promise.all([
+      connector.fetchSignals(projectId, baselineId),
+      connector.fetchSignals(projectId, candidateId),
     ]);
-    const view = buildComparison(project, assembleVersionReport(baseEval), assembleVersionReport(candEval));
+    const baseline = assembleVersionReport(computeEvaluation(base.version, base.signals));
+    const candidate = assembleVersionReport(computeEvaluation(cand.version, cand.signals));
+    const view = buildComparison(project, baseline, candidate);
     if (generateNarrative) {
       view.narrative = await reportGenerator.generate({ view });
     }

@@ -26,6 +26,9 @@ importers:
       '@kaogongsi/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@kaogongsi/l3-metrics':
+        specifier: workspace:*
+        version: link:../../packages/l3-metrics
       '@kaogongsi/l6-compare':
         specifier: workspace:*
         version: link:../../packages/l6-compare
@@ -57,6 +60,9 @@ importers:
       '@kaogongsi/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@kaogongsi/l3-metrics':
+        specifier: workspace:*
+        version: link:../../packages/l3-metrics
       '@kaogongsi/l6-compare':
         specifier: workspace:*
         version: link:../../packages/l6-compare
@@ -118,6 +124,35 @@ importers:
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/contracts:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
+
+  packages/l2-provenance:
+    dependencies:
+      '@kaogongsi/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
+
+  packages/l3-metrics:
+    dependencies:
+      '@kaogongsi/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@kaogongsi/l2-provenance':
+        specifier: workspace:*
+        version: link:../l2-provenance
     devDependencies:
       typescript:
         specifier: ^5.7.0
