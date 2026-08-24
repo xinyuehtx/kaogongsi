@@ -126,6 +126,32 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
+  packages/l4-attribution:
+    dependencies:
+      '@kaogongsi/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
+
+  packages/l5-decision:
+    dependencies:
+      '@kaogongsi/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)
+
   packages/l6-compare:
     dependencies:
       '@kaogongsi/contracts':
@@ -144,6 +170,12 @@ importers:
       '@kaogongsi/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@kaogongsi/l4-attribution':
+        specifier: workspace:*
+        version: link:../l4-attribution
+      '@kaogongsi/l5-decision':
+        specifier: workspace:*
+        version: link:../l5-decision
     devDependencies:
       typescript:
         specifier: ^5.7.0

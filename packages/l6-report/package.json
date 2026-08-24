@@ -13,7 +13,9 @@
     "lint": "echo 'lint: l6-report (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*"
+    "@kaogongsi/contracts": "workspace:*",
+    "@kaogongsi/l4-attribution": "workspace:*",
+    "@kaogongsi/l5-decision": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

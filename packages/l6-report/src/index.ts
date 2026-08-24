@@ -4,7 +4,21 @@ import type {
   ReportSection,
   ReportView,
   TrajectoryKpis,
+  VersionEvaluation,
+  VersionReport,
 } from '@kaogongsi/contracts';
+import { buildAttribution } from '@kaogongsi/l4-attribution';
+import { decide } from '@kaogongsi/l5-decision';
+
+/**
+ * 组合管道（RFC-003）：原始证据 → 归因(L4) → 决策(L5) → VersionReport。
+ * 连接器只给证据；这里把「归因」与「决策」两步显式串起来（L4/L5 边界物理可见）。
+ */
+export function assembleVersionReport(evaluation: VersionEvaluation): VersionReport {
+  const attribution = buildAttribution(evaluation);
+  const decision = decide(attribution, evaluation.kpis);
+  return { version: evaluation.version, decision, kpis: evaluation.kpis };
+}
 
 export interface BuildExecOptions {
   drillable: boolean; // 来自连接器 capabilities().drillable（D9.3）
