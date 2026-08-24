@@ -120,6 +120,9 @@ export interface Kpi {
   guardrailBreached?: boolean; // 护栏破线（A8）
   diagnostic?: boolean; // 诊断/效率用，非 pass/fail 打分（D11/A1）
   signalOnly?: boolean; // 仅排查信号，不作门禁（如 Right Tool Rate）
+  betterWhen?: 'higher' | 'lower'; // 变好的方向；缺省按启发式推断
+  stdDev?: number; // A4：重复采样标准差（用于显著性/置信区间）
+  nSamples?: number; // 样本量
   sourceLineage: string[];
 }
 
@@ -249,5 +252,9 @@ export interface DataConnector {
   capabilities(): ConnectorCapabilities;
   fetchDecision(query: ReportQuery): Promise<DecisionRecord>;
   fetchKpis(query: ReportQuery): Promise<KpiSet>;
+  // RFC-002：按「项目 → 版本」组织评测报告与对比。
+  listProjects(): Promise<ProjectSummary[]>;
+  listVersions(projectId: string): Promise<VersionSummary[]>;
+  fetchVersionReport(projectId: string, versionId: string): Promise<VersionReport>;
 }
 

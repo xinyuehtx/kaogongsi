@@ -11,3 +11,6 @@ test-results/
 
 # 项目背景与调研资料（转交自 e2e-evals，仅供本地参考，不入库）
 .context/
+
+# TypeScript incremental build info
+*.tsbuildinfo

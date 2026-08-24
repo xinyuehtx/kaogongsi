@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type {
   AttributionResult,
+  ComparisonView,
   MetricCaseBundle,
   ReportView,
+  VersionReport,
 } from './index.js';
 
 /**
@@ -59,5 +61,65 @@ describe('契约: ReportView 多受众', () => {
       sections: [{ title: 'ROI 趋势', kind: 'trend', data: [], sourceLineage: ['run-1'] }],
     };
     expect(execView.audience).toBe('exec');
+  });
+});
+
+describe('契约: 项目/版本 + 对比（RFC-002）', () => {
+  it('VersionReport 自洽：归因三段和为 1', () => {
+    const vr: VersionReport = {
+      version: {
+        id: 'v2.0',
+        projectId: 'p1',
+        label: 'v2.0',
+        createdAt: '2026-08-01',
+        harnessConfigVersion: 'h@1',
+        evidenceLevel: 'full',
+      },
+      decision: {
+        gate: 'GO',
+        recommendation: '继续',
+        rationale: '质量升',
+        sensitivity: '稳健',
+        counterEvidence: '留存偏低',
+        assumptions: [],
+        attribution: {
+          distribution: [
+            { party: 'tech', share: 0.6, supportingMetrics: ['m'], supportingCases: ['c'] },
+            { party: 'product', share: 0.4, supportingMetrics: ['m'], supportingCases: ['c'] },
+          ],
+          confidence: 'medium',
+          drillable: true,
+        },
+      },
+      kpis: {
+        quality: [],
+        product: [],
+        financial: [],
+        guardrail: [],
+        trajectory: { efficiency: [], decisionQuality: [], planningQuality: [], interactionQuality: [], stability: [] },
+      },
+    };
+    const sum = vr.decision.attribution.distribution.reduce((a, s) => a + s.share, 0);
+    expect(sum).toBeCloseTo(1, 5);
+  });
+
+  it('ComparisonView: delta 方向枚举 + betterWhen 语义可表达', () => {
+    const view: ComparisonView = {
+      project: { id: 'p1', name: '项目一', description: '' },
+      baseline: { id: 'v1.0', projectId: 'p1', label: 'v1.0', createdAt: '2026-07-01', harnessConfigVersion: 'h@1', evidenceLevel: 'full' },
+      candidate: { id: 'v2.0', projectId: 'p1', label: 'v2.0', createdAt: '2026-08-01', harnessConfigVersion: 'h@1', evidenceLevel: 'full' },
+      groups: [
+        {
+          key: 'quality',
+          title: '质量',
+          deltas: [
+            { key: 'success_rate', label: '任务成功率', unit: '%', baseline: 64, candidate: 72, delta: 8, deltaPct: 12.5, betterWhen: 'higher', direction: 'improved', significant: true },
+          ],
+        },
+      ],
+      gateBaseline: 'ABSTAIN',
+      gateCandidate: 'GO',
+    };
+    expect(view.groups[0]?.deltas[0]?.direction).toBe('improved');
   });
 });

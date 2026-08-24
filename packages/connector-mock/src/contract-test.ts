@@ -45,5 +45,35 @@ export function runConnectorContract(
       expect(k.trajectory.interactionQuality.length).toBeGreaterThan(0);
       expect(k.trajectory.stability.length).toBeGreaterThan(0);
     });
+
+    it('listProjects 非空，listVersions 都归属该项目（RFC-002）', async () => {
+      const c = makeConnector();
+      const projects = await c.listProjects();
+      expect(projects.length).toBeGreaterThan(0);
+      for (const p of projects) {
+        const versions = await c.listVersions(p.id);
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions.every((v) => v.projectId === p.id)).toBe(true);
+      }
+    });
+
+    it('fetchVersionReport 自洽：门禁枚举 + 归因三段和为 1 + 每段有案例支撑（RFC-002）', async () => {
+      const c = makeConnector();
+      const projects = await c.listProjects();
+      for (const p of projects) {
+        const versions = await c.listVersions(p.id);
+        for (const v of versions) {
+          const report = await c.fetchVersionReport(p.id, v.id);
+          expect(report.version.id).toBe(v.id);
+          expect(['GO', 'NO_GO', 'ABSTAIN']).toContain(report.decision.gate);
+          const sum = report.decision.attribution.distribution.reduce((a, s) => a + s.share, 0);
+          expect(sum).toBeCloseTo(1, 5);
+          for (const s of report.decision.attribution.distribution) {
+            expect(s.supportingCases.length).toBeGreaterThan(0); // D9.3
+          }
+          expect(report.kpis.quality.length).toBeGreaterThan(0);
+        }
+      }
+    });
   });
 }
