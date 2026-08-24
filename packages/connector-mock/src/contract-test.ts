@@ -57,21 +57,27 @@ export function runConnectorContract(
       }
     });
 
-    it('fetchEvaluation 返回原始证据：kpis + bundles（非 metric-only 时每 bundle 带案例，D9.3）（RFC-003）', async () => {
+    it('fetchSignals 返回归一化信号（契约⓪）：字段完整 + 携带指标观测（RFC-004）', async () => {
       const c = makeConnector();
       const projects = await c.listProjects();
       for (const p of projects) {
         const versions = await c.listVersions(p.id);
         for (const v of versions) {
-          const ev = await c.fetchEvaluation(p.id, v.id);
-          expect(ev.version.id).toBe(v.id);
-          expect(ev.kpis.quality.length).toBeGreaterThan(0);
-          if (ev.version.evidenceLevel !== 'metric-only') {
-            expect(ev.bundles.length).toBeGreaterThan(0);
-            for (const b of ev.bundles) {
-              expect(b.supportingCases.length).toBeGreaterThan(0); // D9.3：证据可下钻
-            }
+          const { version, signals } = await c.fetchSignals(p.id, v.id);
+          expect(version.id).toBe(v.id);
+          expect(signals.length).toBeGreaterThan(0);
+          for (const s of signals) {
+            expect(s.source).toBeTruthy();
+            expect(s.runId).toBeTruthy();
+            expect(s.caseId).toBeTruthy();
+            expect(s.experimentId).toBeTruthy();
+            expect(s.harnessConfigVersion).toBeTruthy();
+            expect(['full', 'partial', 'metric-only']).toContain(s.evidenceLevel);
           }
+          // 至少覆盖若干已知指标
+          const keys = new Set(signals.map((s) => s.metricKey));
+          expect(keys.has('success_rate')).toBe(true);
+          expect(keys.has('roi')).toBe(true);
         }
       }
     });

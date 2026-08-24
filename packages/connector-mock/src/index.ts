@@ -1,20 +1,20 @@
 import type {
+  CanonicalSignal,
   ConnectorCapabilities,
   DataConnector,
   DecisionRecord,
   EvidenceLevel,
   Kpi,
   KpiSet,
-  MetricCaseBundle,
+  MetricDef,
   ProjectSummary,
   ReportQuery,
-  SupportingCase,
-  VersionEvaluation,
+  VersionSignals,
   VersionSummary,
 } from '@kaogongsi/contracts';
+import { METRIC_CATALOG } from '@kaogongsi/contracts';
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
-const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 
 const kpi = (
   key: string,
@@ -41,7 +41,7 @@ export class MockConnector implements DataConnector {
   private readonly kpis: KpiSet;
   private readonly projects: ProjectSummary[];
   private readonly versionsByProject: Map<string, VersionSummary[]>;
-  private readonly evaluations: Map<string, VersionEvaluation>;
+  private readonly signalsByVersion: Map<string, VersionSignals>;
 
   constructor(opts: MockConnectorOptions = {}) {
     this.id = opts.id ?? 'mock';
@@ -49,13 +49,12 @@ export class MockConnector implements DataConnector {
     this.decision = opts.decision ?? defaultDecision();
     this.kpis = opts.kpis ?? defaultKpis();
 
-    // 前序流程为每个项目每个版本产出**原始评测证据**（KpiSet + MetricCaseBundle）。
-    // 归因(L4)/决策(L5)不在连接器里算——连接器只取证据（RFC-003 层间隔离）。
-    // 默认项目最新版承载注入/默认 KPI，保持既有场景（mock/breach/metric-only）。
+    // 前序流程为每个项目每个版本产出**原始归一化信号**（契约⓪ CanonicalSignal）。
+    // 血缘(L2)/指标(L3)/归因(L4)/决策(L5) 全部在下游从信号计算——连接器只取证据（RFC-004）。
     const fixture = buildFixture({ kpis: this.kpis, evidenceLevel: this.evidenceLevel });
     this.projects = fixture.projects;
     this.versionsByProject = fixture.versionsByProject;
-    this.evaluations = fixture.evaluations;
+    this.signalsByVersion = fixture.signalsByVersion;
   }
 
   capabilities(): ConnectorCapabilities {
@@ -79,10 +78,10 @@ export class MockConnector implements DataConnector {
   async listVersions(projectId: string): Promise<VersionSummary[]> {
     return this.versionsByProject.get(projectId) ?? [];
   }
-  async fetchEvaluation(projectId: string, versionId: string): Promise<VersionEvaluation> {
-    const ev = this.evaluations.get(`${projectId}/${versionId}`);
-    if (!ev) throw new Error(`未找到版本证据: ${projectId}/${versionId}`);
-    return ev;
+  async fetchSignals(projectId: string, versionId: string): Promise<VersionSignals> {
+    const s = this.signalsByVersion.get(`${projectId}/${versionId}`);
+    if (!s) throw new Error(`未找到版本信号: ${projectId}/${versionId}`);
+    return s;
   }
 }
 
@@ -112,27 +111,27 @@ export function defaultDecision(): DecisionRecord {
 export function defaultKpis(): KpiSet {
   return {
     quality: [
-      kpi('success_rate', '任务成功率', 72, '%', { trend: 'up', betterWhen: 'higher', stdDev: 2, nSamples: 200 }),
-      kpi('pass_hat_k', 'pass^k 可靠性', 25, '%', { trend: 'up', betterWhen: 'higher', stdDev: 2, nSamples: 200 }),
-      kpi('regressions', '回归掉的用例', 3, '个', { trend: 'down', betterWhen: 'lower', stdDev: 1, nSamples: 200 }),
+      kpi('success_rate', '任务成功率', 72, '%', { trend: 'up', betterWhen: 'higher' }),
+      kpi('pass_hat_k', 'pass^k 可靠性', 25, '%', { trend: 'up', betterWhen: 'higher' }),
+      kpi('regressions', '回归掉的用例', 3, '个', { trend: 'down', betterWhen: 'lower' }),
     ],
     product: [
-      kpi('adoption', '采用率', 38, '%', { trend: 'up', betterWhen: 'higher', stdDev: 1.5 }),
-      kpi('retention_30d', '30 日留存', 41, '%', { trend: 'flat', betterWhen: 'higher', stdDev: 1.5 }),
-      kpi('csat', '满意度(点赞率)', 86, '%', { trend: 'up', betterWhen: 'higher', stdDev: 1 }),
+      kpi('adoption', '采用率', 38, '%', { trend: 'up', betterWhen: 'higher' }),
+      kpi('retention_30d', '30 日留存', 41, '%', { trend: 'flat', betterWhen: 'higher' }),
+      kpi('csat', '满意度(点赞率)', 86, '%', { trend: 'up', betterWhen: 'higher' }),
       kpi('task_volume', '任务量', 12400, '次/日', { trend: 'up', betterWhen: 'higher' }),
-      kpi('containment', '自足完成率', 78, '%', { trend: 'up', betterWhen: 'higher', stdDev: 1.5 }),
+      kpi('containment', '自足完成率', 78, '%', { trend: 'up', betterWhen: 'higher' }),
     ],
     financial: [
-      kpi('cost_of_pass', 'Cost-of-Pass', 0.18, 'USD', { trend: 'down', betterWhen: 'lower', stdDev: 0.01 }),
-      kpi('roi', 'ROI', 140, '%', { trend: 'up', betterWhen: 'higher', stdDev: 8 }),
-      kpi('cost_quality', '成本-质量比', 0.25, 'USD/%', { trend: 'down', betterWhen: 'lower', stdDev: 0.02 }),
+      kpi('cost_of_pass', 'Cost-of-Pass', 0.18, 'USD', { trend: 'down', betterWhen: 'lower' }),
+      kpi('roi', 'ROI', 140, '%', { trend: 'up', betterWhen: 'higher' }),
+      kpi('cost_quality', '成本-质量比', 0.25, 'USD/%', { trend: 'down', betterWhen: 'lower' }),
     ],
     guardrail: [
-      kpi('hallucination', '幻觉率', 3, '%', { guardrailBreached: false, betterWhen: 'lower', stdDev: 0.5 }),
-      kpi('refusal', '拒答率', 5, '%', { guardrailBreached: false, betterWhen: 'lower', stdDev: 0.5 }),
-      kpi('safety_violation', '安全违规率', 0.4, '%', { guardrailBreached: false, betterWhen: 'lower', stdDev: 0.1 }),
-      kpi('latency_p95', 'P95 延迟', 28, 'min', { guardrailBreached: false, betterWhen: 'lower', stdDev: 2 }),
+      kpi('hallucination', '幻觉率', 3, '%', { guardrailBreached: false, betterWhen: 'lower' }),
+      kpi('refusal', '拒答率', 5, '%', { guardrailBreached: false, betterWhen: 'lower' }),
+      kpi('safety_violation', '安全违规率', 0.4, '%', { guardrailBreached: false, betterWhen: 'lower' }),
+      kpi('latency_p95', 'P95 延迟', 28, 'min', { guardrailBreached: false, betterWhen: 'lower' }),
     ],
     trajectory: {
       efficiency: [
@@ -164,68 +163,74 @@ export function defaultKpis(): KpiSet {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 从 KPI 合成 MetricCaseBundle 证据（契约②）
-// 每个指标按"相对目标的欠缺"确定失败案例数——让下游归因有据可依、数据驱动。
+// 把某版本的 KpiSet 编码为归一化信号（契约⓪）——L3 会从信号重算回指标。
+// case-based 指标铺成 N 个逐案例信号（带 verdict，可供 L2 建血缘 / 下钻）；
+// 其余（含 metric-only 全部）铺成单条聚合读数。
 // ─────────────────────────────────────────────────────────────
-const TARGET: Record<string, number> = {
-  success_rate: 70,
-  pass_hat_k: 20,
-  regressions: 3,
-  adoption: 35,
-  retention_30d: 45,
-  csat: 85,
-  containment: 75,
-  cost_of_pass: 0.2,
-  roi: 120,
-  cost_quality: 0.28,
-  hallucination: 5,
-  refusal: 8,
-  safety_violation: 1,
-  latency_p95: 30,
-};
-
-const CASES_PER_BUNDLE = 4;
-
-function casesFor(
-  projectId: string,
-  versionId: string,
-  k: Kpi,
-  evidenceLevel: EvidenceLevel,
-): SupportingCase[] {
-  if (evidenceLevel === 'metric-only') return []; // 纯 BI：无案例血缘（D9.3）
-  const t = TARGET[k.key];
-  const shortfall =
-    t === undefined
-      ? 0
-      : k.betterWhen === 'lower'
-        ? clamp01((k.value - t) / t)
-        : clamp01((t - k.value) / t);
-  const fails = k.guardrailBreached ? CASES_PER_BUNDLE : Math.round(shortfall * CASES_PER_BUNDLE);
-  return Array.from({ length: CASES_PER_BUNDLE }, (_, i) => ({
-    caseId: `${versionId}:${k.key}:${i}`,
-    verdict: i < fails ? 'fail' : 'pass',
-    evidenceRef: `ev:${projectId}:${versionId}:${k.key}:${i}`,
-    lineage: [`mock:${projectId}:${versionId}`],
-  }));
+function flattenValues(kpis: KpiSet): Map<string, number> {
+  const all: Kpi[] = [
+    ...kpis.quality,
+    ...kpis.product,
+    ...kpis.financial,
+    ...kpis.guardrail,
+    ...kpis.trajectory.efficiency,
+    ...kpis.trajectory.decisionQuality,
+    ...kpis.trajectory.planningQuality,
+    ...kpis.trajectory.interactionQuality,
+    ...kpis.trajectory.stability,
+  ];
+  return new Map(all.map((k) => [k.key, k.value]));
 }
 
-function bundlesFromKpis(
+function signalsForVersion(
   projectId: string,
   version: VersionSummary,
   kpis: KpiSet,
-): MetricCaseBundle[] {
-  const scoring: Kpi[] = [...kpis.quality, ...kpis.product, ...kpis.financial, ...kpis.guardrail];
-  return scoring
-    .filter((k) => k.key in TARGET)
-    .map((k) => ({
-      metric: { name: k.key, mean: k.value, nSamples: k.nSamples ?? 200, bootstrapStd: k.stdDev },
-      supportingCases: casesFor(projectId, version.id, k, version.evidenceLevel),
-      evidenceLevel: version.evidenceLevel,
-    }));
+): CanonicalSignal[] {
+  const values = flattenValues(kpis);
+  const meta = {
+    source: 'mock',
+    sourceLineage: [`mock:${projectId}:${version.id}`],
+    runId: version.id,
+    experimentId: projectId,
+    harnessConfigVersion: version.harnessConfigVersion,
+    evidenceLevel: version.evidenceLevel,
+    evidence: {},
+  };
+  const out: CanonicalSignal[] = [];
+
+  const pushAgg = (def: MetricDef, value: number): void => {
+    out.push({ ...meta, caseId: `${version.id}:${def.key}:agg`, metricKey: def.key, observation: value, verdict: 'unknown' });
+  };
+  const pushCases = (def: MetricDef, value: number): void => {
+    const n = def.nSamples ?? 100;
+    const positives = Math.round((value / 100) * n); // higher-better=通过数；lower-better=命中(坏)数
+    for (let i = 0; i < n; i++) {
+      const hit = i < positives; // observation=1 的案例
+      // higher-better：hit=通过；lower-better：hit=坏事件(失败)
+      const verdict: CanonicalSignal['verdict'] =
+        def.betterWhen === 'higher' ? (hit ? 'pass' : 'fail') : hit ? 'fail' : 'pass';
+      out.push({
+        ...meta,
+        caseId: `${version.id}:${def.key}:${i}`,
+        metricKey: def.key,
+        observation: hit ? 1 : 0,
+        verdict,
+      });
+    }
+  };
+
+  for (const def of METRIC_CATALOG) {
+    const value = values.get(def.key);
+    if (value === undefined) continue;
+    if (def.caseBased && version.evidenceLevel !== 'metric-only') pushCases(def, value);
+    else pushAgg(def, value); // 聚合读数（含 metric-only 全部）
+  }
+  return out;
 }
 
 // ─────────────────────────────────────────────────────────────
-// 多项目 / 多版本 fixture（RFC-002/003）
+// 多项目 / 多版本 fixture（RFC-002/003/004）
 // ─────────────────────────────────────────────────────────────
 function adjustKpis(base: KpiSet, deltas: Record<string, number>): KpiSet {
   const bump = (arr: Kpi[]): Kpi[] =>
@@ -248,9 +253,7 @@ function adjustKpis(base: KpiSet, deltas: Record<string, number>): KpiSet {
 function breachGuardrail(kpis: KpiSet, key: string, value: number): KpiSet {
   return {
     ...kpis,
-    guardrail: kpis.guardrail.map((k) =>
-      k.key === key ? { ...k, value, guardrailBreached: true, trend: 'up' } : k,
-    ),
+    guardrail: kpis.guardrail.map((k) => (k.key === key ? { ...k, value, trend: 'up' } : k)),
   };
 }
 
@@ -258,11 +261,10 @@ interface FixtureInput {
   kpis: KpiSet;
   evidenceLevel: EvidenceLevel;
 }
-
 interface Fixture {
   projects: ProjectSummary[];
   versionsByProject: Map<string, VersionSummary[]>;
-  evaluations: Map<string, VersionEvaluation>;
+  signalsByVersion: Map<string, VersionSignals>;
 }
 
 export function defaultProjects(): ProjectSummary[] {
@@ -275,20 +277,19 @@ export function defaultProjects(): ProjectSummary[] {
 function buildFixture(input: FixtureInput): Fixture {
   const projects = defaultProjects();
   const versionsByProject = new Map<string, VersionSummary[]>();
-  const evaluations = new Map<string, VersionEvaluation>();
+  const signalsByVersion = new Map<string, VersionSignals>();
 
   const add = (v: VersionSummary, kpis: KpiSet): void => {
     const list = versionsByProject.get(v.projectId) ?? [];
     list.push(v);
     versionsByProject.set(v.projectId, list);
-    evaluations.set(`${v.projectId}/${v.id}`, {
+    signalsByVersion.set(`${v.projectId}/${v.id}`, {
       version: v,
-      kpis,
-      bundles: bundlesFromKpis(v.projectId, v, kpis),
+      signals: signalsForVersion(v.projectId, v, kpis),
     });
   };
 
-  // ── 项目一 dt-sheet：最新版承载注入/默认 KPI（保 RFC-001/002 场景），旧版本递减。
+  // ── 项目一 dt-sheet：最新版承载注入/默认 KPI，旧版本递减。
   add(
     { id: 'v2.0', projectId: 'dt-sheet', label: 'v2.0', createdAt: '2026-08-20', harnessConfigVersion: 'inspect@0.3.9+claude-sonnet', evidenceLevel: input.evidenceLevel, note: '最新版（当前候选）' },
     input.kpis,
@@ -313,5 +314,5 @@ function buildFixture(input: FixtureInput): Fixture {
     adjustKpis(fsBase, { success_rate: -4, adoption: -8, roi: -20 }),
   );
 
-  return { projects, versionsByProject, evaluations };
+  return { projects, versionsByProject, signalsByVersion };
 }
