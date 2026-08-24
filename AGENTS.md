@@ -17,17 +17,19 @@
 | 层 | 包 | 上缘契约 |
 |---|---|---|
 | L6 呈现/路由 | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 决策 | *(待建)* | AttributionResult |
-| L4 归因 | *(待建)* | MetricCaseBundle |
-| L3 计算 | *(待建)* | Provenance 查询 |
+| L5 决策 | `packages/l5-decision` | AttributionResult |
+| L4 归因 | `packages/l4-attribution` | MetricCaseBundle |
+| L3 计算 | *(待建；暂由 connector-mock 合成 bundle 顶替)* | Provenance 查询 |
 | L2 证据/血缘 | *(待建)* | CanonicalSignal |
-| L1 接入/适配 | `packages/connector-mock`（+ 未来 BI/Langfuse/L5 连接器） | — |
+| L1 接入/适配 | `packages/connector-mock`（只吐 VersionEvaluation 证据；+ 未来 BI/Langfuse/L5 连接器） | — |
 | 契约（贯穿） | `packages/contracts` | 五道缝的类型定义 |
+
+**管道**：`connector.fetchEvaluation` → `l4.buildAttribution` → `l5.decide` → `l6-report.assembleVersionReport` → 视图。连接器只取证据，归因(L4)与决策(L5)是两个独立引擎、两道契约。
 
 **实现顺序**：自顶向下（先 L6 对上报告，逐步下接传统 evals）。
 
 ### 端口（D3，基建可替换，不泄漏进内核）
-- `DataConnector`（读侧数据源）：`capabilities/fetchDecision/fetchKpis/listProjects/listVersions/fetchVersionReport`。
+- `DataConnector`（读侧数据源）：`capabilities/fetchDecision/fetchKpis/listProjects/listVersions/fetchEvaluation`。**连接器只取证据（VersionEvaluation），不做归因/决策**。
 - `ReportGenerator`（LLM 出口）：`generate(input) → ComparativeNarrative`。默认离线模板，可切真实 OpenAI 兼容模型。
 
 ## 2. 不可违反的约定（红线，来自 RFC DECISIONS D7-D11 / 七公理）
