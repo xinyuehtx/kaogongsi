@@ -26,9 +26,15 @@ importers:
       '@kaogongsi/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@kaogongsi/l6-compare':
+        specifier: workspace:*
+        version: link:../../packages/l6-compare
       '@kaogongsi/l6-report':
         specifier: workspace:*
         version: link:../../packages/l6-report
+      '@kaogongsi/report-llm':
+        specifier: workspace:*
+        version: link:../../packages/report-llm
       fastify:
         specifier: ^5.2.0
         version: 5.12.1
