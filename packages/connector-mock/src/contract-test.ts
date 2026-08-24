@@ -57,21 +57,21 @@ export function runConnectorContract(
       }
     });
 
-    it('fetchVersionReport 自洽：门禁枚举 + 归因三段和为 1 + 每段有案例支撑（RFC-002）', async () => {
+    it('fetchEvaluation 返回原始证据：kpis + bundles（非 metric-only 时每 bundle 带案例，D9.3）（RFC-003）', async () => {
       const c = makeConnector();
       const projects = await c.listProjects();
       for (const p of projects) {
         const versions = await c.listVersions(p.id);
         for (const v of versions) {
-          const report = await c.fetchVersionReport(p.id, v.id);
-          expect(report.version.id).toBe(v.id);
-          expect(['GO', 'NO_GO', 'ABSTAIN']).toContain(report.decision.gate);
-          const sum = report.decision.attribution.distribution.reduce((a, s) => a + s.share, 0);
-          expect(sum).toBeCloseTo(1, 5);
-          for (const s of report.decision.attribution.distribution) {
-            expect(s.supportingCases.length).toBeGreaterThan(0); // D9.3
+          const ev = await c.fetchEvaluation(p.id, v.id);
+          expect(ev.version.id).toBe(v.id);
+          expect(ev.kpis.quality.length).toBeGreaterThan(0);
+          if (ev.version.evidenceLevel !== 'metric-only') {
+            expect(ev.bundles.length).toBeGreaterThan(0);
+            for (const b of ev.bundles) {
+              expect(b.supportingCases.length).toBeGreaterThan(0); // D9.3：证据可下钻
+            }
           }
-          expect(report.kpis.quality.length).toBeGreaterThan(0);
         }
       }
     });

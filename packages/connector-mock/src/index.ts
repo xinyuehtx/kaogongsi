@@ -5,13 +5,16 @@ import type {
   EvidenceLevel,
   Kpi,
   KpiSet,
+  MetricCaseBundle,
   ProjectSummary,
   ReportQuery,
-  VersionReport,
+  SupportingCase,
+  VersionEvaluation,
   VersionSummary,
 } from '@kaogongsi/contracts';
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 
 const kpi = (
   key: string,
@@ -34,11 +37,11 @@ export class MockConnector implements DataConnector {
   readonly id: string;
   readonly kind: DataConnector['kind'] = 'mock';
   private readonly evidenceLevel: EvidenceLevel;
-  private readonly decision: DecisionRecord;
+  private readonly decision: DecisionRecord; // 仅供 RFC-001 legacy fetchDecision
   private readonly kpis: KpiSet;
   private readonly projects: ProjectSummary[];
   private readonly versionsByProject: Map<string, VersionSummary[]>;
-  private readonly reports: Map<string, VersionReport>;
+  private readonly evaluations: Map<string, VersionEvaluation>;
 
   constructor(opts: MockConnectorOptions = {}) {
     this.id = opts.id ?? 'mock';
@@ -46,16 +49,13 @@ export class MockConnector implements DataConnector {
     this.decision = opts.decision ?? defaultDecision();
     this.kpis = opts.kpis ?? defaultKpis();
 
-    // 前序流程为每个项目的每个版本产出一轮评测结果（VersionReport）。
-    // 默认项目的最新版本 = 注入/默认的 decision + kpis（保持 RFC-001 行为）。
-    const fixture = buildFixture({
-      decision: this.decision,
-      kpis: this.kpis,
-      evidenceLevel: this.evidenceLevel,
-    });
+    // 前序流程为每个项目每个版本产出**原始评测证据**（KpiSet + MetricCaseBundle）。
+    // 归因(L4)/决策(L5)不在连接器里算——连接器只取证据（RFC-003 层间隔离）。
+    // 默认项目最新版承载注入/默认 KPI，保持既有场景（mock/breach/metric-only）。
+    const fixture = buildFixture({ kpis: this.kpis, evidenceLevel: this.evidenceLevel });
     this.projects = fixture.projects;
     this.versionsByProject = fixture.versionsByProject;
-    this.reports = fixture.reports;
+    this.evaluations = fixture.evaluations;
   }
 
   capabilities(): ConnectorCapabilities {
@@ -65,10 +65,10 @@ export class MockConnector implements DataConnector {
     };
   }
 
+  // RFC-001 legacy：单份烤好的报告（/api/report/exec 仍用）
   async fetchDecision(_query: ReportQuery): Promise<DecisionRecord> {
     return this.decision;
   }
-
   async fetchKpis(_query: ReportQuery): Promise<KpiSet> {
     return this.kpis;
   }
@@ -76,20 +76,18 @@ export class MockConnector implements DataConnector {
   async listProjects(): Promise<ProjectSummary[]> {
     return this.projects;
   }
-
   async listVersions(projectId: string): Promise<VersionSummary[]> {
     return this.versionsByProject.get(projectId) ?? [];
   }
-
-  async fetchVersionReport(projectId: string, versionId: string): Promise<VersionReport> {
-    const r = this.reports.get(`${projectId}/${versionId}`);
-    if (!r) throw new Error(`未找到版本报告: ${projectId}/${versionId}`);
-    return r;
+  async fetchEvaluation(projectId: string, versionId: string): Promise<VersionEvaluation> {
+    const ev = this.evaluations.get(`${projectId}/${versionId}`);
+    if (!ev) throw new Error(`未找到版本证据: ${projectId}/${versionId}`);
+    return ev;
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 默认单份报告（RFC-001 exec 视图直接消费）
+// 默认单份报告（RFC-001 legacy exec 视图直接消费）
 // ─────────────────────────────────────────────────────────────
 export function defaultDecision(): DecisionRecord {
   return {
@@ -166,10 +164,69 @@ export function defaultKpis(): KpiSet {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 多项目 / 多版本 fixture（RFC-002）
+// 从 KPI 合成 MetricCaseBundle 证据（契约②）
+// 每个指标按"相对目标的欠缺"确定失败案例数——让下游归因有据可依、数据驱动。
 // ─────────────────────────────────────────────────────────────
+const TARGET: Record<string, number> = {
+  success_rate: 70,
+  pass_hat_k: 20,
+  regressions: 3,
+  adoption: 35,
+  retention_30d: 45,
+  csat: 85,
+  containment: 75,
+  cost_of_pass: 0.2,
+  roi: 120,
+  cost_quality: 0.28,
+  hallucination: 5,
+  refusal: 8,
+  safety_violation: 1,
+  latency_p95: 30,
+};
 
-/** 克隆 KpiSet 并对指定 key 施加增量（负数=更差的旧版本）。 */
+const CASES_PER_BUNDLE = 4;
+
+function casesFor(
+  projectId: string,
+  versionId: string,
+  k: Kpi,
+  evidenceLevel: EvidenceLevel,
+): SupportingCase[] {
+  if (evidenceLevel === 'metric-only') return []; // 纯 BI：无案例血缘（D9.3）
+  const t = TARGET[k.key];
+  const shortfall =
+    t === undefined
+      ? 0
+      : k.betterWhen === 'lower'
+        ? clamp01((k.value - t) / t)
+        : clamp01((t - k.value) / t);
+  const fails = k.guardrailBreached ? CASES_PER_BUNDLE : Math.round(shortfall * CASES_PER_BUNDLE);
+  return Array.from({ length: CASES_PER_BUNDLE }, (_, i) => ({
+    caseId: `${versionId}:${k.key}:${i}`,
+    verdict: i < fails ? 'fail' : 'pass',
+    evidenceRef: `ev:${projectId}:${versionId}:${k.key}:${i}`,
+    lineage: [`mock:${projectId}:${versionId}`],
+  }));
+}
+
+function bundlesFromKpis(
+  projectId: string,
+  version: VersionSummary,
+  kpis: KpiSet,
+): MetricCaseBundle[] {
+  const scoring: Kpi[] = [...kpis.quality, ...kpis.product, ...kpis.financial, ...kpis.guardrail];
+  return scoring
+    .filter((k) => k.key in TARGET)
+    .map((k) => ({
+      metric: { name: k.key, mean: k.value, nSamples: k.nSamples ?? 200, bootstrapStd: k.stdDev },
+      supportingCases: casesFor(projectId, version.id, k, version.evidenceLevel),
+      evidenceLevel: version.evidenceLevel,
+    }));
+}
+
+// ─────────────────────────────────────────────────────────────
+// 多项目 / 多版本 fixture（RFC-002/003）
+// ─────────────────────────────────────────────────────────────
 function adjustKpis(base: KpiSet, deltas: Record<string, number>): KpiSet {
   const bump = (arr: Kpi[]): Kpi[] =>
     arr.map((k) => (k.key in deltas ? { ...k, value: round2(k.value + (deltas[k.key] ?? 0)) } : { ...k }));
@@ -188,7 +245,6 @@ function adjustKpis(base: KpiSet, deltas: Record<string, number>): KpiSet {
   };
 }
 
-/** 在 KpiSet 中把某个护栏指标置为破线（用于回退版本演示）。 */
 function breachGuardrail(kpis: KpiSet, key: string, value: number): KpiSet {
   return {
     ...kpis,
@@ -198,12 +254,7 @@ function breachGuardrail(kpis: KpiSet, key: string, value: number): KpiSet {
   };
 }
 
-function mkDecision(over: Partial<DecisionRecord> = {}): DecisionRecord {
-  return { ...defaultDecision(), ...over };
-}
-
 interface FixtureInput {
-  decision: DecisionRecord;
   kpis: KpiSet;
   evidenceLevel: EvidenceLevel;
 }
@@ -211,10 +262,9 @@ interface FixtureInput {
 interface Fixture {
   projects: ProjectSummary[];
   versionsByProject: Map<string, VersionSummary[]>;
-  reports: Map<string, VersionReport>;
+  evaluations: Map<string, VersionEvaluation>;
 }
 
-/** 默认项目列表（供无 fixture 时直接读取）。 */
 export function defaultProjects(): ProjectSummary[] {
   return [
     { id: 'dt-sheet', name: '钉钉 AI 表格 Agent', description: '表格自动填充 / 公式生成 / 数据洞察' },
@@ -225,140 +275,43 @@ export function defaultProjects(): ProjectSummary[] {
 function buildFixture(input: FixtureInput): Fixture {
   const projects = defaultProjects();
   const versionsByProject = new Map<string, VersionSummary[]>();
-  const reports = new Map<string, VersionReport>();
+  const evaluations = new Map<string, VersionEvaluation>();
 
-  const add = (v: VersionSummary, decision: DecisionRecord, kpis: KpiSet): void => {
+  const add = (v: VersionSummary, kpis: KpiSet): void => {
     const list = versionsByProject.get(v.projectId) ?? [];
     list.push(v);
     versionsByProject.set(v.projectId, list);
-    reports.set(`${v.projectId}/${v.id}`, { version: v, decision, kpis });
+    evaluations.set(`${v.projectId}/${v.id}`, {
+      version: v,
+      kpis,
+      bundles: bundlesFromKpis(v.projectId, v, kpis),
+    });
   };
 
-  // ── 项目一 dt-sheet：最新版承载注入/默认报告（RFC-001 兼容），旧版本递减。
+  // ── 项目一 dt-sheet：最新版承载注入/默认 KPI（保 RFC-001/002 场景），旧版本递减。
   add(
-    {
-      id: 'v2.0',
-      projectId: 'dt-sheet',
-      label: 'v2.0',
-      createdAt: '2026-08-20',
-      harnessConfigVersion: 'inspect@0.3.9+claude-sonnet',
-      evidenceLevel: input.evidenceLevel,
-      note: '最新版（当前候选）',
-    },
-    input.decision,
+    { id: 'v2.0', projectId: 'dt-sheet', label: 'v2.0', createdAt: '2026-08-20', harnessConfigVersion: 'inspect@0.3.9+claude-sonnet', evidenceLevel: input.evidenceLevel, note: '最新版（当前候选）' },
     input.kpis,
   );
   add(
-    {
-      id: 'v1.1',
-      projectId: 'dt-sheet',
-      label: 'v1.1',
-      createdAt: '2026-07-18',
-      harnessConfigVersion: 'inspect@0.3.7+claude-sonnet',
-      evidenceLevel: input.evidenceLevel,
-    },
-    mkDecision({
-      gate: 'ABSTAIN',
-      recommendation: '再观察：质量提升但样本不足以确认显著',
-      rationale: '任务成功率较 v1.0 上升，但置信区间仍与基线重叠',
-    }),
-    adjustKpis(input.kpis, {
-      success_rate: -8,
-      pass_hat_k: -6,
-      regressions: 2,
-      adoption: -6,
-      retention_30d: -3,
-      csat: -2,
-      cost_of_pass: 0.05,
-      roi: -30,
-      cost_quality: 0.05,
-      hallucination: 1,
-      steps_to_success: 1,
-    }),
+    { id: 'v1.1', projectId: 'dt-sheet', label: 'v1.1', createdAt: '2026-07-18', harnessConfigVersion: 'inspect@0.3.7+claude-sonnet', evidenceLevel: input.evidenceLevel },
+    adjustKpis(input.kpis, { success_rate: -8, pass_hat_k: -6, regressions: 2, adoption: -6, retention_30d: -3, csat: -2, cost_of_pass: 0.05, roi: -30, cost_quality: 0.05, hallucination: 1, steps_to_success: 1 }),
   );
   add(
-    {
-      id: 'v1.0',
-      projectId: 'dt-sheet',
-      label: 'v1.0',
-      createdAt: '2026-06-30',
-      harnessConfigVersion: 'inspect@0.3.5+claude-sonnet',
-      evidenceLevel: input.evidenceLevel,
-      note: '首个可评测版本（基线）',
-    },
-    mkDecision({
-      gate: 'ABSTAIN',
-      recommendation: '基线版本：作为后续对比的锚点',
-      rationale: '首次上线，指标作为 baseline',
-    }),
-    adjustKpis(input.kpis, {
-      success_rate: -15,
-      pass_hat_k: -12,
-      regressions: 5,
-      adoption: -12,
-      retention_30d: -6,
-      csat: -5,
-      cost_of_pass: 0.12,
-      roi: -70,
-      cost_quality: 0.1,
-      hallucination: 2,
-      steps_to_success: 3,
-    }),
+    { id: 'v1.0', projectId: 'dt-sheet', label: 'v1.0', createdAt: '2026-06-30', harnessConfigVersion: 'inspect@0.3.5+claude-sonnet', evidenceLevel: input.evidenceLevel, note: '首个可评测版本（基线）' },
+    adjustKpis(input.kpis, { success_rate: -15, pass_hat_k: -12, regressions: 5, adoption: -12, retention_30d: -6, csat: -5, cost_of_pass: 0.12, roi: -70, cost_quality: 0.1, hallucination: 2, steps_to_success: 3 }),
   );
 
-  // ── 项目二 fs-doc：始终 full 证据、独立于注入报告；v1.0 相对 v0.9 出现护栏回退（演示 regression）。
+  // ── 项目二 fs-doc：始终 full 证据；v1.0 相对 v0.9 出现护栏回退（演示 regression + NO-GO）。
   const fsBase = defaultKpis();
-  const fsV09 = adjustKpis(fsBase, { success_rate: -4, adoption: -8, roi: -20 });
-  const fsV10 = breachGuardrail(
-    adjustKpis(fsBase, { success_rate: 3, adoption: 5, roi: 15 }),
-    'hallucination',
-    9,
+  add(
+    { id: 'v1.0', projectId: 'fs-doc', label: 'v1.0', createdAt: '2026-08-15', harnessConfigVersion: 'inspect@0.3.9+claude-sonnet', evidenceLevel: 'full', note: '质量上升但幻觉率破线（回退风险）' },
+    breachGuardrail(adjustKpis(fsBase, { success_rate: 3, adoption: 5, roi: 15 }), 'hallucination', 9),
   );
   add(
-    {
-      id: 'v1.0',
-      projectId: 'fs-doc',
-      label: 'v1.0',
-      createdAt: '2026-08-15',
-      harnessConfigVersion: 'inspect@0.3.9+claude-sonnet',
-      evidenceLevel: 'full',
-      note: '质量上升但幻觉率破线（回退风险）',
-    },
-    mkDecision({
-      gate: 'NO_GO',
-      recommendation: '建议暂停放量：质量虽升，但幻觉率护栏破线',
-      rationale: '任务成功率 +3pp，但幻觉率升至 9%（阈值 5%）',
-      sensitivity: '多次运行一致，非噪声',
-      counterEvidence: '若能修复幻觉，质量增益可保留',
-      attribution: {
-        distribution: [
-          { party: 'tech', share: 0.7, supportingMetrics: ['hallucination'], supportingCases: ['case-901'] },
-          { party: 'product', share: 0.2, supportingMetrics: ['adoption'], supportingCases: ['case-902'] },
-          { party: 'ops', share: 0.1, supportingMetrics: ['data_quality'], supportingCases: ['case-903'] },
-        ],
-        confidence: 'high',
-        drillable: true,
-      },
-    }),
-    fsV10,
-  );
-  add(
-    {
-      id: 'v0.9',
-      projectId: 'fs-doc',
-      label: 'v0.9',
-      createdAt: '2026-07-10',
-      harnessConfigVersion: 'inspect@0.3.7+claude-sonnet',
-      evidenceLevel: 'full',
-      note: '公测版本（基线）',
-    },
-    mkDecision({
-      gate: 'GO',
-      recommendation: '可继续放量：护栏健康、质量稳步',
-      rationale: '各护栏指标在阈值内',
-    }),
-    fsV09,
+    { id: 'v0.9', projectId: 'fs-doc', label: 'v0.9', createdAt: '2026-07-10', harnessConfigVersion: 'inspect@0.3.7+claude-sonnet', evidenceLevel: 'full', note: '公测版本（基线）' },
+    adjustKpis(fsBase, { success_rate: -4, adoption: -8, roi: -20 }),
   );
 
-  return { projects, versionsByProject, reports };
+  return { projects, versionsByProject, evaluations };
 }

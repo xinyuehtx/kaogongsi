@@ -170,6 +170,17 @@ export interface VersionReport {
   kpis: KpiSet;
 }
 
+/**
+ * 单个版本的**原始评测证据**（RFC-003）——连接器的真实产物（契约②级）。
+ * 归因引擎(L4)消费 bundles，决策引擎(L5)据归因产出 DecisionRecord。
+ * 连接器只负责"取证据"，不负责"归因/决策"（层间隔离）。
+ */
+export interface VersionEvaluation {
+  version: VersionSummary;
+  kpis: KpiSet;
+  bundles: MetricCaseBundle[]; // 指标 + 支撑案例 + 血缘（D9.3）
+}
+
 // ─────────────────────────────────────────────────────────────
 // 版本对比契约（RFC-002）—— L6 对比视图
 // A4：对比必带方向 + 显著性，不做裸分对比。
@@ -252,9 +263,13 @@ export interface DataConnector {
   capabilities(): ConnectorCapabilities;
   fetchDecision(query: ReportQuery): Promise<DecisionRecord>;
   fetchKpis(query: ReportQuery): Promise<KpiSet>;
-  // RFC-002：按「项目 → 版本」组织评测报告与对比。
+  // RFC-002/003：按「项目 → 版本」组织评测报告与对比。
   listProjects(): Promise<ProjectSummary[]>;
   listVersions(projectId: string): Promise<VersionSummary[]>;
-  fetchVersionReport(projectId: string, versionId: string): Promise<VersionReport>;
+  /**
+   * 取某版本的原始评测证据（契约②级）。连接器只取证据，不做归因/决策；
+   * 归因(L4)与决策(L5)由各自引擎从此计算（RFC-003）。
+   */
+  fetchEvaluation(projectId: string, versionId: string): Promise<VersionEvaluation>;
 }
 
