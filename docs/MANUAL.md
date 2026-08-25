@@ -42,6 +42,12 @@ KAOGONGSI_PARSERS=claude-code,langfuse
 docker-compose：放开 `./trajectories:/trajectories:ro` 卷 + `KAOGONGSI_INGEST=file:/trajectories`。
 只映射轨迹能给出的指标（成功率/成本/步数/工具成功率/护栏命中），给不出的（留存/ROI 等）留空。
 
+**可信指标深化（RFC-012）**——轨迹里带上这些字段即自动生效：
+- `case_id`/`task_id`：同一用例多次运行 → **pass^k 实测**（k 次全过才算可靠）
+- `costUsd`：逐案例成本 → **Cost-of-Pass = 总成本/通过数**（真实分布）
+- `durationMs`/`latencyMs`：→ 延迟 **p50/p95/p99**（护栏用 p95）
+- tag `difficulty:hard` / `stratum:x` / `tier:x`：→ **分层指标**（暴露"整体好、难例差"）
+
 ## 1. 环境
 
 - Node ≥ 22（开发用 24）、pnpm 10。

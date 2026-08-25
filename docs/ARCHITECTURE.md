@@ -74,8 +74,8 @@ L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真
 | `@tengxiaohtx/connector-mock` | `MockConnector`（多项目/多版本；只吐 CanonicalSignal 信号）+ 可复用连接器契约测试 | ✅ |
 | `@tengxiaohtx/ingest` | 真实轨迹接入：File/HTTP 源（分批/时间/tag/header）+ 12 种解析器插件 + IngestConnector（RFC-006） | ✅ |
 | `@tengxiaohtx/provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
-| `@tengxiaohtx/metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
-| `@tengxiaohtx/attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
+| `@tengxiaohtx/metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI · 真实成本分布 · 延迟分位数 · **pass^k 实测** · **分层指标**）+ bundles | ✅ |
+| `@tengxiaohtx/attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动 + **反事实充分性检验**，铁律） | ✅ |
 | `@tengxiaohtx/decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
 | `@tengxiaohtx/report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
 | `@tengxiaohtx/compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
@@ -91,9 +91,10 @@ L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真
 | `@tengxiaohtx/example-web` | **应用层**：Vite 应用（api/local 双模式装配、Pages 站点、Tailwind） | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
 | `@tengxiaohtx/connector-example` · `@tengxiaohtx/aisdk` | 跨层示例连接器（财务/BI/skill/DSL/存储） · 内核 AI SDK LLM 适配器 | ✅ |
-| `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(5) 共 14 场景 | ✅ |
+| `e2e` | Playwright；exec(6，含分层指标) + compare(4) + auth-rbac(5) 共 15 场景 | ✅ |
 
-**六层全部落地**。**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L3 真实成本/延迟分布、分层指标、pass^k 多 run 估计；L2 大 payload 外置 + 跨 run baggage 关联；反事实验证（REFLECT）。
+**六层全部落地**（L3 真实分布/分层/pass^k 实测、L4 反事实充分性检验已落地，RFC-012）。
+**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L2 大 payload 外置 + 跨 run baggage 关联；REFLECT **真重跑**（需执行层）；分层置信区间与分层门禁策略。
 
 ## 2b. 新增契约缝（RFC-002）
 
@@ -135,3 +136,4 @@ L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真
 | 009 三层架构 + 内核 Agent Loop + 运行溯源 | `docs/rfcs/RFC-009-three-tier-kernel-runstore.md` | `docs/stories/US-009-three-tier-kernel-runstore.md` | ✅ 完成 |
 | 010 存储防腐层 + Postgres/Prisma + Redis example | `docs/rfcs/RFC-010-persistence-acl-postgres-redis.md` | `docs/stories/US-010-persistence-acl-postgres-redis.md` | ✅ 完成 |
 | 011 依赖倒置（内核干净）+ example 组装启动 | `docs/rfcs/RFC-011-dependency-inversion-example-assembly.md` | `docs/stories/US-011-dependency-inversion-example-assembly.md` | ✅ 完成 |
+| 012 可信指标深化（真实分布/分层/pass^k 实测）+ 反事实验证 | `docs/rfcs/RFC-012-trustworthy-metrics-counterfactual.md` | `docs/stories/US-012-trustworthy-metrics-counterfactual.md` | ✅ 完成 |
