@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": ["node"], "composite": false, "noEmit": true },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../app" },
+    { "path": "../../kernel/contracts" },
+    { "path": "../../kernel/auth-core" },
+    { "path": "../../kernel/run-store" },
+    { "path": "../../kernel/agent-loop" },
+    { "path": "../../middleware/decision" },
+    { "path": "../../middleware/plugin-core" },
+    { "path": "../../middleware/ingest" },
+    { "path": "../../connectors/mock" }
+  ]
+}

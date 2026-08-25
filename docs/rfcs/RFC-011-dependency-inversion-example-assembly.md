@@ -93,4 +93,6 @@ example/.env.example
 
 - ✅ **已落地**：依赖方向已固化为门禁 `scripts/check-architecture.mjs`（零依赖，校验 package.json 声明 + 源码 import），
   接入 `pnpm lint:arch` / `pnpm verify` 与 `.github/workflows/ci.yml`；已用注入违规验证其确实会失败（exit 1）。
-- 待做：example 增更多装配样例（不同层切片 / 不同连接器组合）；把 e2e 也纳入 PR 必过门禁的时长优化。
+- ✅ **已落地**：`example/recipes` 三个装配样例（A 只选 L4-L6 外部指标 / B 全链路轨迹+零插件 /
+  C 插件替换 L5 严格门禁），4 单测证明**同一内核与中间件靠配方产出不同行为**（默认 GO vs 严格 ABSTAIN）。
+- 待做：把 e2e 纳入 PR 必过门禁的时长优化。

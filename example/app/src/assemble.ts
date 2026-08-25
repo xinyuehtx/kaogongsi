@@ -4,6 +4,8 @@ import type {
   ComparisonView,
   DataConnector,
   LayerContext,
+  LayerId,
+  VersionEvaluation,
   LlmProvider,
   ProjectSummary,
   ReportGenerator,
@@ -48,6 +50,13 @@ import { defaultPlugins } from '@tengxiaohtx/connector-example';
 
 export interface CreateAppOptions {
   connector?: DataConnector; // 默认：按 env 选轨迹接入，否则 MockConnector
+  /** 选层切片（RFC-008/011）：缺省 L4-L6（归因→决策→报告）。 */
+  layers?: LayerId[];
+  /**
+   * 直接提供某版本的评测结果（跳过 L1 信号 + L2 血缘 + L3 计算）。
+   * 用于"外部已有指标（BI）只跑 L4-L6"的装配（见 example/recipes）。
+   */
+  evaluationFor?: (projectId: string, versionId: string) => Promise<VersionEvaluation>;
   reportGenerator?: ReportGenerator; // 默认：按 env 选真实 LLM，否则离线模板
   llmProvider?: LlmProvider; // 注入内核 LLM 适配器（如 aisdk）时改用 provider 生成
   storage?: StoragePort; // 账号存储（默认交内核按防腐层装配）
@@ -65,9 +74,9 @@ class PipelineReportService implements ReportService {
     private readonly runStore: RunStore,
     private readonly logger: Logger,
     private readonly generator: ReportGenerator,
+    private readonly layers: LayerId[] = ['attribution', 'decision', 'report'],
+    private readonly evaluationFor?: (projectId: string, versionId: string) => Promise<VersionEvaluation>,
   ) {}
-
-  private static readonly LAYERS = ['attribution', 'decision', 'report'] as const;
   private now(): string {
     return new Date().toISOString();
   }
@@ -75,13 +84,19 @@ class PipelineReportService implements ReportService {
     return this.connector.capabilities().drillable && evidenceLevel !== 'metric-only';
   }
   private stages() {
-    return buildStages({ layers: [...PipelineReportService.LAYERS], resolve: (l) => this.host.stageFor(l) });
+    return buildStages({ layers: this.layers, resolve: (l) => this.host.stageFor(l) });
   }
 
   /** 信号(L1) → 血缘/指标(L2/L3) + 插件目录/派生/外部数据 → 归因/决策/报告(L4-L6)，每层入参落库。 */
   private async run(projectId: string, versionId: string, actor?: string): Promise<{ ctx: LayerContext; runId: string }> {
-    const { version, signals } = await this.connector.fetchSignals(projectId, versionId);
-    const ev = computeEvaluation(version, this.host.applyDerivations(signals), this.host.mergedCatalog(METRIC_CATALOG));
+    // 外部已有评测结果 ⇒ 只跑所选上层切片；否则走 L1 信号 → L2/L3 计算
+    const ev = this.evaluationFor
+      ? await this.evaluationFor(projectId, versionId)
+      : await (async () => {
+          const { version, signals } = await this.connector.fetchSignals(projectId, versionId);
+          return computeEvaluation(version, this.host.applyDerivations(signals), this.host.mergedCatalog(METRIC_CATALOG));
+        })();
+    const version = ev.version;
     for (const e of this.host.externalData()) {
       try {
         ev.kpis[e.group].push(...(await e.fetch({ projectId, versionId }, {})));
@@ -244,7 +259,15 @@ export async function createApp(opts: CreateAppOptions = {}): Promise<FastifyIns
   return buildServer({
     services: {
       projects: new ConnectorProjectDirectory(connector),
-      reports: new PipelineReportService(connector, host, runStore, logger, generator),
+      reports: new PipelineReportService(
+        connector,
+        host,
+        runStore,
+        logger,
+        generator,
+        opts.layers ?? ['attribution', 'decision', 'report'],
+        opts.evaluationFor,
+      ),
       plugins: new HostPluginDirectory(host, pluginData),
     },
     storage: opts.storage,

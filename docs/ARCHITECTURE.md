@@ -10,8 +10,9 @@
 
 ```
 ┌──────────────────── example/  组装 + 启动（依赖全部）────────────────────────┐
-│ app/  assemble.ts 装配 ServerServices（连接器+管道+插件+LLM）· main.ts 监听    │
-│ web/  Vite 应用：注入 authApi / DataClient（local 演示态在浏览器内装配管道）     │
+│ app/      assemble.ts 装配 ServerServices（连接器+管道+插件+LLM）· main.ts 监听 │
+│ web/      Vite 应用：注入 authApi / DataClient（local 演示态浏览器内装配管道）   │
+│ recipes/  多装配样例：选层切片 / 换连接器 / 插件替换某层（同内核不同行为）        │
 │ docker-compose.yml  一键起 Postgres + Redis + app + web · .env.example       │
 └───────────────┬─────────────────────────────────────────┬───────────────────┘
                 │ 依赖                                     │ 依赖
@@ -89,6 +90,7 @@ L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真
 | `@tengxiaohtx/web`(kernel) | UI 库：登录/角色门禁/管理台/报告/对比/插件面板 + api 模式客户端（注入式） | ✅ |
 | `@tengxiaohtx/example-app` | **组装层**：装配连接器+分层管道+插件宿主+LLM → 内核 ServerServices；启动入口 | ✅ |
 | `@tengxiaohtx/example-web` | **应用层**：Vite 应用（api/local 双模式装配、Pages 站点、Tailwind） | ✅ |
+| `@tengxiaohtx/example-recipes` | **多装配样例**：A 只选 L4-L6(外部指标) · B 全链路轨迹+零插件 · C 插件替换 L5 严格门禁 | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
 | `@tengxiaohtx/connector-example` · `@tengxiaohtx/aisdk` | 跨层示例连接器（财务/BI/skill/DSL/存储） · 内核 AI SDK LLM 适配器 | ✅ |
 | `e2e` | Playwright；exec(6，含分层指标) + compare(4) + auth-rbac(5) 共 15 场景 | ✅ |

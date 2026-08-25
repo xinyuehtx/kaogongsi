@@ -48,6 +48,18 @@ docker-compose：放开 `./trajectories:/trajectories:ro` 卷 + `KAOGONGSI_INGES
 - `durationMs`/`latencyMs`：→ 延迟 **p50/p95/p99**（护栏用 p95）
 - tag `difficulty:hard` / `stratum:x` / `tier:x`：→ **分层指标**（暴露"整体好、难例差"）
 
+## 0b. 多装配样例（example/recipes）
+
+同一套内核 + 中间件 + 连接器，靠"配方"拼出行为不同的 App（`pnpm --filter @tengxiaohtx/example-recipes test` 可跑）：
+
+| 配方 | 装配 | 效果 |
+|---|---|---|
+| A `createBiSliceApp` | **只选 L4-L6**，外部（BI）已有指标经 `evaluationFor` 注入；零插件 | 跳过 L1/L2/L3；metric-only ⇒ 不可下钻、归因低置信（D9.3） |
+| B `createTraceApp(dir)` | ingest 文件源 + **全链路 L1-L6**；零插件 | 指标由轨迹算出；可下钻；无外部数据注入 |
+| C `createStrictGateApp` | 插件向 **L5 贡献更严格的决策 stage** + 注入内核 LLM provider | 同一份数据：默认配方 **GO**，严格配方 **ABSTAIN** |
+
+> 要做自己的 App：照 `example/recipes/src/index.ts` 传参给 `createApp` 即可——**内核与中间件一行不改**。
+
 ## 1. 环境
 
 - Node ≥ 22（开发用 24）、pnpm 10。
