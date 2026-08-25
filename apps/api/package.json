@@ -17,6 +17,7 @@
     "@tengxiaohtx/connector-mock": "workspace:*",
     "@tengxiaohtx/ingest": "workspace:*",
     "@tengxiaohtx/metrics": "workspace:*",
+    "@tengxiaohtx/pipeline": "workspace:*",
     "@tengxiaohtx/report": "workspace:*",
     "@tengxiaohtx/compare": "workspace:*",
     "@tengxiaohtx/plugin-core": "workspace:*",

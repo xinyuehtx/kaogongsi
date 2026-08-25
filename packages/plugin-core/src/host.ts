@@ -1,4 +1,4 @@
-import type { CanonicalSignal, Kpi, LlmProvider, MetricDef, SkillTemplate } from '@tengxiaohtx/contracts';
+import type { CanonicalSignal, Kpi, LayerId, LayerStage, LlmProvider, MetricDef, SkillTemplate } from '@tengxiaohtx/contracts';
 import type {
   DataSourceContribution,
   ExternalDataContribution,
@@ -59,6 +59,14 @@ export class PluginHost {
   }
   skill(id: string): SkillTemplate | undefined {
     return this.skills().find((s) => s.id === id);
+  }
+  stages(): LayerStage[] {
+    return this.collect((p) => p.stages);
+  }
+  /** 某层的插件 stage（多个取最后注册者，供管道 resolve 覆盖内核默认）。 */
+  stageFor(layer: LayerId): LayerStage | undefined {
+    const matches = this.stages().filter((s) => s.layer === layer);
+    return matches.at(-1);
   }
   forms(): UiForm[] {
     return this.collect((p) => p.forms);

@@ -18,6 +18,38 @@ export type Gate = 'GO' | 'NO_GO' | 'ABSTAIN';
 export type Audience = 'exec' | 'product' | 'engineer';
 
 // ─────────────────────────────────────────────────────────────
+// 可组装分层管道（RFC-008）—— 插件组装方向自下而上，与内核依赖方向相反。
+// 内核依赖：上层包 import 下层契约（自上而下）。
+// 管道组装：下层输出 → 上层输入（自下而上）；App 选层切片，插件按所选层贡献 stage。
+// ─────────────────────────────────────────────────────────────
+export type LayerId = 'ingest' | 'provenance' | 'metrics' | 'attribution' | 'decision' | 'report';
+
+/** 层的自下而上顺序（数据流方向；组装即按此串联）。 */
+export const LAYER_ORDER: LayerId[] = ['ingest', 'provenance', 'metrics', 'attribution', 'decision', 'report'];
+
+/**
+ * 管道上下文：随层自下而上累积。上层 stage 可读下层 stage 的产出
+ * （如 decision(L5) 读 attribution(L4) 产出）。
+ */
+export interface LayerContext {
+  version?: VersionSummary;
+  signals?: CanonicalSignal[];
+  evaluation?: VersionEvaluation; // metrics(L3) 产出
+  attribution?: AttributionResult; // attribution(L4) 产出
+  decision?: DecisionRecord; // decision(L5) 产出
+  view?: ReportView; // report(L6) 产出
+  drillable?: boolean;
+  [key: string]: unknown; // 插件自定义产出（跨层组装）
+}
+
+/** 一个层的可组装组件：读 ctx（含下层产出）→ 产出本层结果（合并回 ctx）。 */
+export interface LayerStage {
+  layer: LayerId;
+  id: string;
+  run(ctx: LayerContext): Partial<LayerContext> | Promise<Partial<LayerContext>>;
+}
+
+// ─────────────────────────────────────────────────────────────
 // 契约⓪ Canonical Signal Model —— L1→L2，采集隔离边界
 // 任何来源（我方执行器 / BI / 现有平台 / 人工评价）都归一化到此。
 // ─────────────────────────────────────────────────────────────

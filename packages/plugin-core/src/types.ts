@@ -1,4 +1,4 @@
-import type { CanonicalSignal, Kpi, LlmProvider, MetricDef, SkillTemplate } from '@tengxiaohtx/contracts';
+import type { CanonicalSignal, Kpi, LayerStage, LlmProvider, MetricDef, SkillTemplate } from '@tengxiaohtx/contracts';
 import type { TrajectorySource } from '@tengxiaohtx/ingest';
 
 /**
@@ -85,6 +85,7 @@ export interface Plugin {
   metrics?: MetricContribution[]; // L3
   externalData?: ExternalDataContribution[]; // L4-L5
   skills?: SkillTemplate[]; // L4-L6
+  stages?: LayerStage[]; // 可组装分层管道 stage（RFC-008；替换/扩展某层实现）
   forms?: UiForm[]; // UI DSL
   storage?: StorageSchema[]; // 入库声明
 }

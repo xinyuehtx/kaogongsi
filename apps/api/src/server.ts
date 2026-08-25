@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import type { DataConnector, ReportGenerator } from '@tengxiaohtx/contracts';
 import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
 import { computeEvaluation } from '@tengxiaohtx/metrics';
-import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/report';
+import { buildStages, runPipeline } from '@tengxiaohtx/pipeline';
 import { buildComparison } from '@tengxiaohtx/compare';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
@@ -64,8 +64,9 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   const drillableOf = (evidenceLevel: string): boolean =>
     connector.capabilities().drillable && evidenceLevel !== 'metric-only';
 
-  // 六层管道 + 插件：合并指标目录 + 派生信号 + 并入外部数据（财务/BI）
-  const buildVersionReport = async (projectId: string, versionId: string) => {
+  // 六层管道 + 插件：合并指标目录 + 派生信号 + 并入外部数据（财务/BI），
+  // 归因→决策→报告经可组装管道（RFC-008），插件可替换任一层 stage。
+  const runVersion = async (projectId: string, versionId: string) => {
     const { version, signals } = await connector.fetchSignals(projectId, versionId);
     const ev = computeEvaluation(version, host.applyDerivations(signals), host.mergedCatalog(METRIC_CATALOG));
     for (const e of host.externalData()) {
@@ -75,7 +76,8 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
         /* 外部数据源不可用不阻断报告 */
       }
     }
-    return assembleVersionReport(ev);
+    const stages = buildStages({ layers: ['attribution', 'decision', 'report'], resolve: (l) => host.stageFor(l) });
+    return runPipeline(stages, { version, evaluation: ev, drillable: drillableOf(version.evidenceLevel) });
   };
 
   const currentUser = (req: FastifyRequest): User | null => {
@@ -200,9 +202,8 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const { projectId, versionId } = req.query as { projectId?: string; versionId?: string };
     if (!projectId || !versionId) return reply.code(400).send({ error: '缺少 projectId 或 versionId' });
     if (!canAccessProject(u.role, grantedIds(u), projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const report = await buildVersionReport(projectId, versionId);
-    const view = buildExecReportView(report.decision, report.kpis, { drillable: drillableOf(report.version.evidenceLevel) });
-    return filterViewForRole(view, u.role);
+    const ctx = await runVersion(projectId, versionId);
+    return filterViewForRole(ctx.view!, u.role);
   });
 
   // 两版本对比（+ 可选 LLM/模板生成对比报告）
@@ -215,11 +216,12 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const projects = await connector.listProjects();
     const project = projects.find((p) => p.id === projectId);
     if (!project) return reply.code(404).send({ error: `未找到项目: ${projectId}` });
-    const [baseline, candidate] = await Promise.all([
-      buildVersionReport(projectId, baselineId),
-      buildVersionReport(projectId, candidateId),
+    const [baseCtx, candCtx] = await Promise.all([
+      runVersion(projectId, baselineId),
+      runVersion(projectId, candidateId),
     ]);
-    const view = buildComparison(project, baseline, candidate);
+    const toReport = (ctx: Awaited<ReturnType<typeof runVersion>>) => ({ version: ctx.version!, decision: ctx.decision!, kpis: ctx.evaluation!.kpis });
+    const view = buildComparison(project, toReport(baseCtx), toReport(candCtx));
     if (generateNarrative) view.narrative = await reportGenerator.generate({ view });
     return view;
   });

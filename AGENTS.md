@@ -16,15 +16,17 @@
 
 | 层 | 包 | 上缘契约 |
 |---|---|---|
-| L6 呈现/路由 | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 决策 | `packages/l5-decision` | AttributionResult |
-| L4 归因 | `packages/l4-attribution` | MetricCaseBundle |
-| L3 计算 | `packages/l3-metrics`（bootstrap CI / pass^k / Cost-of-Pass） | Provenance 查询 |
-| L2 证据/血缘 | `packages/l2-provenance`（Source→Case→Metric 图） | CanonicalSignal |
+| L6 呈现/路由 | `apps/web` · `packages/report` · `packages/compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
+| L5 决策 | `packages/decision` | AttributionResult |
+| L4 归因 | `packages/attribution` | MetricCaseBundle |
+| L3 计算 | `packages/metrics`（bootstrap CI / pass^k / Cost-of-Pass） | Provenance 查询 |
+| L2 证据/血缘 | `packages/provenance`（Source→Case→Metric 图） | CanonicalSignal |
 | L1 接入/适配 | `packages/connector-mock`（内置 fixture）· `packages/ingest`（真实轨迹：File/HTTP 源 + 解析器插件） | — |
 | 契约（贯穿） | `packages/contracts`（含指标目录 METRIC_CATALOG） | 五道缝的类型定义 |
 | 横切 · 认证 | `packages/auth-core`（账号/角色/授权 + StoragePort + JWT/scrypt + RBAC） | StoragePort（内存/文件，可换 Postgres） |
-| 横切 · 插件 | `packages/plugin-core`（L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储）· `plugin-example` · `plugin-aisdk` | Plugin manifest / LlmProvider / SkillTemplate |
+| 横切 · 插件 | `packages/plugin-core`（L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储）· `packages/pipeline`（可组装分层管道）· `plugins/example` · `plugins/aisdk` | Plugin manifest / LayerStage / LlmProvider / SkillTemplate |
+
+> **目录**：内核在 `packages/*`，插件在 `plugins/*`。**两个相反的方向**（RFC-008）：内核依赖自上而下（上层 import 下层契约）；插件组装自下而上（下层输出喂上层输入，如 `decision(L5)` 读 `attribution(L4)` 出参）。App 可选层切片（如 L4-L6），插件按 `LayerStage` 向任一层贡献并被 `pipeline` 组装。
 
 **六层贯通管道**：`connector.fetchSignals(L1)` → `buildProvenance(L2)` → `computeEvaluation(L3)` → `buildAttribution(L4)` → `decide(L5)` → `l6-report.assembleVersionReport` → 视图。连接器只取原始信号，血缘/指标/归因/决策各由独立层计算。
 

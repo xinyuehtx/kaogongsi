@@ -33,11 +33,11 @@ Every layer is an independent package depending only on the **stable contracts**
 
 | Layer | Package | Upper-edge contract |
 |---|---|---|
-| L6 Presentation/Routing | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 Decision | `packages/l5-decision` | AttributionResult |
-| L4 Attribution | `packages/l4-attribution` | MetricCaseBundle |
-| L3 Compute | `packages/l3-metrics` | Provenance query |
-| L2 Evidence/Lineage | `packages/l2-provenance` | CanonicalSignal |
+| L6 Presentation/Routing | `apps/web` · `packages/report` · `packages/compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
+| L5 Decision | `packages/decision` | AttributionResult |
+| L4 Attribution | `packages/attribution` | MetricCaseBundle |
+| L3 Compute | `packages/metrics` | Provenance query |
+| L2 Evidence/Lineage | `packages/provenance` | CanonicalSignal |
 | L1 Ingest/Adapt | `packages/connector-mock` (+ future BI/Langfuse/L5) | — |
 | Contracts (cross-cutting) | `packages/contracts` | the five seam types + metric catalog |
 

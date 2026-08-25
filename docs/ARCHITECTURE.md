@@ -9,15 +9,15 @@
 
 ```
 L6 呈现/路由   apps/web (AppShell/ExecDashboard/ComparisonReport)
-               + packages/l6-report + packages/l6-compare + packages/report-llm
+               + packages/report + packages/compare + packages/report-llm
       ▲ 契约④ ReportView / DecisionRecord / ComparisonView / ComparativeNarrative
-L5 决策        packages/l5-decision（门禁政策 + assurance case）
+L5 决策        packages/decision（门禁政策 + assurance case）
       ▲ 契约③ AttributionResult
-L4 归因        packages/l4-attribution（案例驱动三责任方分布）
+L4 归因        packages/attribution（案例驱动三责任方分布）
       ▲ 契约② MetricCaseBundle
-L3 计算        packages/l3-metrics（bootstrap CI / pass^k / Cost-of-Pass）
+L3 计算        packages/metrics（bootstrap CI / pass^k / Cost-of-Pass）
       ▲ 契约① Provenance 查询
-L2 证据/血缘   packages/l2-provenance（Source→Case→Metric 图 + 投影下钻）
+L2 证据/血缘   packages/provenance（Source→Case→Metric 图 + 投影下钻）
       ▲ 契约⓪ CanonicalSignal / VersionSignals
 L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest（真实轨迹：文件/HTTP + 解析器插件）
 ```
@@ -39,6 +39,7 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
 | `@tengxiaohtx/report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
 | `@tengxiaohtx/compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
+| `@tengxiaohtx/pipeline` | 可组装分层管道：内核默认 stage + buildStages/runPipeline（自下而上组装，RFC-008） | ✅ |
 | `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
 | `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
@@ -84,3 +85,4 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | 005 企业化（账号/角色/授权 + 全栈 + Pages） | `docs/rfcs/RFC-005-enterprise-auth-stack-pages.md` | `docs/stories/US-005-enterprise-auth-stack-pages.md` | ✅ 完成 |
 | 006 数据接入（本地文件/HTTP + 解析器插件） | `docs/rfcs/RFC-006-data-ingestion-parsers.md` | `docs/stories/US-006-data-ingestion-parsers.md` | ✅ 完成 |
 | 007 全链路插件系统（跨层 + DSL + NoSQL/Redis） | `docs/rfcs/RFC-007-plugin-system.md` | `docs/stories/US-007-plugin-system.md` | ✅ 完成 |
+| 008 可组装分层管道 + 内核/插件分离 | `docs/rfcs/RFC-008-composable-pipeline.md` | `docs/stories/US-008-composable-pipeline.md` | ✅ 完成 |

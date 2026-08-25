@@ -33,11 +33,11 @@
 
 | 层 | 包 | 契约（上缘） |
 |---|---|---|
-| L6 呈现/路由 | `apps/web` · `packages/l6-report` · `packages/l6-compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 决策 | `packages/l5-decision` | AttributionResult |
-| L4 归因 | `packages/l4-attribution` | MetricCaseBundle |
-| L3 计算 | `packages/l3-metrics` | Provenance 查询 |
-| L2 证据/血缘 | `packages/l2-provenance` | CanonicalSignal |
+| L6 呈现/路由 | `apps/web` · `packages/report` · `packages/compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
+| L5 决策 | `packages/decision` | AttributionResult |
+| L4 归因 | `packages/attribution` | MetricCaseBundle |
+| L3 计算 | `packages/metrics` | Provenance 查询 |
+| L2 证据/血缘 | `packages/provenance` | CanonicalSignal |
 | L1 接入/适配 | `packages/connector-mock`（+ 未来 BI/Langfuse/L5） | — |
 | 契约（贯穿） | `packages/contracts` | 五道缝的类型定义 + 指标目录 |
 

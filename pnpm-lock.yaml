@@ -38,6 +38,9 @@ importers:
       '@tengxiaohtx/metrics':
         specifier: workspace:*
         version: link:../../packages/metrics
+      '@tengxiaohtx/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@tengxiaohtx/plugin-core':
         specifier: workspace:*
         version: link:../../packages/plugin-core
@@ -232,6 +235,31 @@ importers:
       '@tengxiaohtx/provenance':
         specifier: workspace:*
         version: link:../provenance
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  packages/pipeline:
+    dependencies:
+      '@tengxiaohtx/attribution':
+        specifier: workspace:*
+        version: link:../attribution
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@tengxiaohtx/decision':
+        specifier: workspace:*
+        version: link:../decision
+      '@tengxiaohtx/metrics':
+        specifier: workspace:*
+        version: link:../metrics
+      '@tengxiaohtx/report':
+        specifier: workspace:*
+        version: link:../report
     devDependencies:
       typescript:
         specifier: ^5.7.0
