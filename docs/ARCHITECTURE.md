@@ -51,6 +51,7 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
 | `@tengxiaohtx/agent-loop` | 内核 LLMProvider + skill + 最小 Agent Loop（RFC-009） | ✅ |
 | `@tengxiaohtx/run-store` | 内核日志接口 + 运行溯源（连接器两版本 + 每层入参，除 L1）（RFC-009） | ✅ |
+| `@tengxiaohtx/persistence` | 存储防腐层：Prisma(Postgres) + ioredis 适配 StoragePort/DocumentStore/RunStore/KvStore（RFC-010） | ✅ |
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
 | `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 + 插件面板 | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
@@ -96,3 +97,4 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | 007 全链路插件系统（跨层 + DSL + NoSQL/Redis） | `docs/rfcs/RFC-007-plugin-system.md` | `docs/stories/US-007-plugin-system.md` | ✅ 完成 |
 | 008 可组装分层管道 + 内核/插件分离 | `docs/rfcs/RFC-008-composable-pipeline.md` | `docs/stories/US-008-composable-pipeline.md` | ✅ 完成 |
 | 009 三层架构 + 内核 Agent Loop + 运行溯源 | `docs/rfcs/RFC-009-three-tier-kernel-runstore.md` | `docs/stories/US-009-three-tier-kernel-runstore.md` | ✅ 完成 |
+| 010 存储防腐层 + Postgres/Prisma + Redis example | `docs/rfcs/RFC-010-persistence-acl-postgres-redis.md` | `docs/stories/US-010-persistence-acl-postgres-redis.md` | ✅ 完成 |

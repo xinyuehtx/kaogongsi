@@ -4,20 +4,20 @@
 
 ## 0. 本地自包含全栈（企业版，一键起）
 
-参考 Langfuse 自托管思路，一条命令拉起「后端 api + 前端 web」，账号/授权持久化到命名卷：
+参考 Langfuse 自托管思路，一条命令拉起「Postgres + Redis + 后端 api + 前端 web」；
+账号/授权/插件配置/运行溯源入 **Postgres/Prisma**，插件 KV 缓存入 **Redis**（存储防腐层，RFC-010）：
 
 ```bash
+cp .env.example .env          # 改 KAOGONGSI_JWT_SECRET
 docker compose up --build     # 或 pnpm stack:up
-# 打开 http://localhost:8080 —— 首个注册用户自动成为管理员
+# 打开 http://localhost:8080 —— 首个注册用户自动成为管理员（数据持久在 Postgres）
 docker compose down           # 停；docker compose down -v 连数据卷一起清
 ```
 
-- 前端 :8080（nginx 托管静态 + `/api` 反代到 api），后端 :3001。
-- 账号存储：默认 JSON 文件（卷 `kg-data`，`KAOGONGSI_DATA_DIR=/data`）；生产可换 Postgres
-  适配器（`packages/auth-core` 的 `StoragePort`），上层零改动。
-- 环境变量：`KAOGONGSI_JWT_SECRET`（务必改）、可选 `KAOGONGSI_LLM_*`（接真实 LLM，否则离线模板）。
-- 不用 docker 也可跑全栈：`pnpm --filter @tengxiaohtx/api dev`（:3001，tsx 直跑 TS）
-  + `VITE_DATA_MODE=api pnpm --filter @tengxiaohtx/web dev`（:5173）。
+- 前端 :8080（nginx + `/api` 反代），后端 :3001，Postgres :5432，Redis :6379。
+- api 启动时 `prisma db push` 自动建表；`@prisma/client` 于镜像安装时生成。
+- **防腐层与存储独立**：领域只依赖端口，切库只在 `kernel/persistence` 装配处；未配 `DATABASE_URL/REDIS_URL`（本地 dev）自动回落内存/文件。
+- 不用 docker 也可跑：`pnpm --filter @tengxiaohtx/api dev`（:3001）+ `VITE_DATA_MODE=api pnpm --filter @tengxiaohtx/web dev`（:5173）。
 
 > 账号系统：角色 **管理员 / 技术 / 财务 / BI**。管理员在「管理台」建用户、改角色、按项目勾选授权；
 > 角色决定可见报告分区，项目授权决定可见项目（RFC-005）。

@@ -1,34 +1,60 @@
 # 考功司 · 本地自包含全栈（一键 docker compose up）
-# 参考 Langfuse 的自托管思路：一条命令拉起后端 + 前端；账号/授权持久化到命名卷。
-# 生产可把 api 的存储端口从 JSON 文件换成 Postgres（见 packages/auth-core StoragePort）。
+# example：Postgres/Prisma（DB）+ Redis（缓存）+ api + web。账号/授权/文档/溯源入 Postgres，
+# 插件 KV 缓存入 Redis；未配 DATABASE_URL/REDIS_URL 时 api 回落内存/文件（防腐层装配）。
 
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kaogongsi
+      POSTGRES_PASSWORD: kaogongsi
+      POSTGRES_DB: kaogongsi
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kaogongsi']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  cache:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: kernel/api/Dockerfile
     environment:
       PORT: '3001'
-      KAOGONGSI_DATA_DIR: /data
+      KAOGONGSI_DATA_DIR: /data # 日志文件目录
       KAOGONGSI_JWT_SECRET: ${KAOGONGSI_JWT_SECRET:-please-change-in-prod}
-      # 可选：接真实 LLM（对比报告）——留空则用离线确定性模板
+      # 防腐层：DB=Postgres/Prisma，缓存=Redis
+      DATABASE_URL: ${DATABASE_URL:-postgresql://kaogongsi:kaogongsi@db:5432/kaogongsi}
+      REDIS_URL: ${REDIS_URL:-redis://cache:6379}
+      # 可选：接真实 LLM（对比报告）——留空则离线模板
       KAOGONGSI_LLM_BASE_URL: ${KAOGONGSI_LLM_BASE_URL:-}
       KAOGONGSI_LLM_API_KEY: ${KAOGONGSI_LLM_API_KEY:-}
       KAOGONGSI_LLM_MODEL: ${KAOGONGSI_LLM_MODEL:-}
-      # 可选：轨迹接入（RFC-006）。留空=用内置 Mock 数据。
-      #   file:/trajectories 遍历挂载卷；或 http(s)://host/api/traces 拉取
+      # 可选：轨迹接入（RFC-006）
       KAOGONGSI_INGEST: ${KAOGONGSI_INGEST:-}
       KAOGONGSI_PARSERS: ${KAOGONGSI_PARSERS:-}
-      KAOGONGSI_INGEST_HEADERS: ${KAOGONGSI_INGEST_HEADERS:-}
-      KAOGONGSI_INGEST_TAGS: ${KAOGONGSI_INGEST_TAGS:-}
-      KAOGONGSI_INGEST_FROM: ${KAOGONGSI_INGEST_FROM:-}
-      KAOGONGSI_INGEST_TO: ${KAOGONGSI_INGEST_TO:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
     volumes:
       - kg-data:/data
-      # 放开以从本地文件夹接入轨迹（配合 KAOGONGSI_INGEST=file:/trajectories）：
       # - ./trajectories:/trajectories:ro
     ports:
-      - '3001:3001' # 便于直接调试 api（web 已经 /api 反代，不依赖此端口）
+      - '3001:3001'
     restart: unless-stopped
 
   web:
@@ -43,3 +69,4 @@ services:
 
 volumes:
   kg-data:
+  pg-data:
