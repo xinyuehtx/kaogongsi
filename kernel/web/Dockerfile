@@ -8,6 +8,6 @@ RUN pnpm install --frozen-lockfile
 RUN VITE_DATA_MODE=api VITE_API_BASE=/api pnpm --filter @tengxiaohtx/web build
 
 FROM nginx:alpine
-COPY --from=build /app/apps/web/dist /usr/share/nginx/html
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/kernel/web/dist /usr/share/nginx/html
+COPY kernel/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

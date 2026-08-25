@@ -36,10 +36,10 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
         run: pnpm --filter @tengxiaohtx/web build
       - name: SPA fallback (404 = index)
-        run: cp apps/web/dist/index.html apps/web/dist/404.html
+        run: cp kernel/web/dist/index.html kernel/web/dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/web/dist
+          path: kernel/web/dist
 
   deploy:
     needs: build

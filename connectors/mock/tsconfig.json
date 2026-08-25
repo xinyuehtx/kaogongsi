@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src/**/*"],
-  "references": [{ "path": "../../packages/contracts" }, { "path": "../../packages/plugin-core" }]
+  "references": [{ "path": "../../middleware/contracts" }]
 }

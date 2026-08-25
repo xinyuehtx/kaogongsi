@@ -1,5 +1,5 @@
 packages:
-  - "packages/*"
-  - "apps/*"
-  - "plugins/*"
+  - "kernel/*"
+  - "middleware/*"
+  - "connectors/*"
   - "e2e"

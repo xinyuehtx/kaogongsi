@@ -18,41 +18,98 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  apps/api:
+  connectors/example:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../middleware/contracts
+      '@tengxiaohtx/ingest':
+        specifier: workspace:*
+        version: link:../../middleware/ingest
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../middleware/plugin-core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  connectors/mock:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../middleware/contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.50.0
+        version: 1.62.1
+
+  kernel/aisdk:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../middleware/contracts
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../middleware/plugin-core
+      ai:
+        specifier: ^4.0.0
+        version: 4.3.19(react@19.2.8)(zod@3.25.76)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  kernel/api:
     dependencies:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
-        version: link:../../packages/auth-core
+        version: link:../auth-core
       '@tengxiaohtx/compare':
         specifier: workspace:*
-        version: link:../../packages/compare
+        version: link:../../middleware/compare
       '@tengxiaohtx/connector-mock':
         specifier: workspace:*
-        version: link:../../packages/connector-mock
+        version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../packages/contracts
+        version: link:../../middleware/contracts
       '@tengxiaohtx/ingest':
         specifier: workspace:*
-        version: link:../../packages/ingest
+        version: link:../../middleware/ingest
       '@tengxiaohtx/metrics':
         specifier: workspace:*
-        version: link:../../packages/metrics
+        version: link:../../middleware/metrics
       '@tengxiaohtx/pipeline':
         specifier: workspace:*
-        version: link:../../packages/pipeline
+        version: link:../../middleware/pipeline
       '@tengxiaohtx/plugin-core':
         specifier: workspace:*
-        version: link:../../packages/plugin-core
+        version: link:../../middleware/plugin-core
       '@tengxiaohtx/plugin-example':
         specifier: workspace:*
-        version: link:../../plugins/example
+        version: link:../../connectors/example
       '@tengxiaohtx/report':
         specifier: workspace:*
-        version: link:../../packages/report
+        version: link:../../middleware/report
       '@tengxiaohtx/report-llm':
         specifier: workspace:*
-        version: link:../../packages/report-llm
+        version: link:../../middleware/report-llm
       fastify:
         specifier: ^5.2.0
         version: 5.12.1
@@ -70,29 +127,45 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  apps/web:
+  kernel/auth-core:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../middleware/contracts
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  kernel/web:
     dependencies:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
-        version: link:../../packages/auth-core
+        version: link:../auth-core
       '@tengxiaohtx/compare':
         specifier: workspace:*
-        version: link:../../packages/compare
+        version: link:../../middleware/compare
       '@tengxiaohtx/connector-mock':
         specifier: workspace:*
-        version: link:../../packages/connector-mock
+        version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../packages/contracts
+        version: link:../../middleware/contracts
       '@tengxiaohtx/metrics':
         specifier: workspace:*
-        version: link:../../packages/metrics
+        version: link:../../middleware/metrics
       '@tengxiaohtx/report':
         specifier: workspace:*
-        version: link:../../packages/report
+        version: link:../../middleware/report
       '@tengxiaohtx/report-llm':
         specifier: workspace:*
-        version: link:../../packages/report-llm
+        version: link:../../middleware/report-llm
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -125,13 +198,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  e2e:
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.50.0
-        version: 1.62.1
-
-  packages/attribution:
+  middleware/attribution:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -144,23 +211,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/auth-core:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.0
-        version: 22.20.1
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/compare:
+  middleware/compare:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -173,7 +224,16 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/connector-mock:
+  middleware/contracts:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  middleware/decision:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -186,29 +246,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/contracts:
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/decision:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/ingest:
+  middleware/ingest:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -227,7 +265,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/metrics:
+  middleware/metrics:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -243,7 +281,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/pipeline:
+  middleware/pipeline:
     dependencies:
       '@tengxiaohtx/attribution':
         specifier: workspace:*
@@ -268,7 +306,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/plugin-core:
+  middleware/plugin-core:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -284,7 +322,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/provenance:
+  middleware/provenance:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
@@ -297,7 +335,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/report:
+  middleware/report:
     dependencies:
       '@tengxiaohtx/attribution':
         specifier: workspace:*
@@ -316,7 +354,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/report-llm:
+  middleware/report-llm:
     dependencies:
       '@tengxiaohtx/compare':
         specifier: workspace:*
@@ -324,44 +362,6 @@ importers:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  plugins/aisdk:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../../packages/plugin-core
-      ai:
-        specifier: ^4.0.0
-        version: 4.3.19(react@19.2.8)(zod@3.25.76)
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  plugins/example:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@tengxiaohtx/ingest':
-        specifier: workspace:*
-        version: link:../../packages/ingest
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../../packages/plugin-core
     devDependencies:
       typescript:
         specifier: ^5.7.0
