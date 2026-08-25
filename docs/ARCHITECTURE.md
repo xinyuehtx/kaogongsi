@@ -42,8 +42,10 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
 | `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
-| `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 | ✅ |
-| `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(4) 共 13 场景 | ✅ |
+| `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 + 插件面板 | ✅ |
+| `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
+| `@tengxiaohtx/plugin-example` · `@tengxiaohtx/plugin-aisdk` | 跨层示例插件 · Vercel AI SDK LLM Provider | ✅ |
+| `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(5) 共 14 场景 | ✅ |
 
 **六层全部落地**。**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L3 真实成本/延迟分布、分层指标、pass^k 多 run 估计；L2 大 payload 外置 + 跨 run baggage 关联；反事实验证（REFLECT）。
 
@@ -81,3 +83,4 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | 004 贯通 L1→L3（信号/血缘/可信指标） | `docs/rfcs/RFC-004-ingest-provenance-metrics.md` | `docs/stories/US-004-ingest-provenance-metrics.md` | ✅ 完成 |
 | 005 企业化（账号/角色/授权 + 全栈 + Pages） | `docs/rfcs/RFC-005-enterprise-auth-stack-pages.md` | `docs/stories/US-005-enterprise-auth-stack-pages.md` | ✅ 完成 |
 | 006 数据接入（本地文件/HTTP + 解析器插件） | `docs/rfcs/RFC-006-data-ingestion-parsers.md` | `docs/stories/US-006-data-ingestion-parsers.md` | ✅ 完成 |
+| 007 全链路插件系统（跨层 + DSL + NoSQL/Redis） | `docs/rfcs/RFC-007-plugin-system.md` | `docs/stories/US-007-plugin-system.md` | ✅ 完成 |

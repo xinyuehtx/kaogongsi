@@ -51,3 +51,10 @@ test('管理台仅管理员可见，可新建用户', async ({ page }) => {
   await page.getByTestId('admin-create-user').click();
   await expect(page.getByTestId('admin-user-newbie@demo')).toBeVisible();
 });
+
+test('管理员可见「插件」面板（全链路插件系统入口）', async ({ page }) => {
+  await loginAs(page, 'admin');
+  await expect(page.getByTestId('nav-plugins')).toBeVisible();
+  await page.getByTestId('nav-plugins').click();
+  await expect(page.getByTestId('plugins-panel')).toBeVisible();
+});

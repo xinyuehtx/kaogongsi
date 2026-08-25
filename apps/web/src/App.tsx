@@ -7,10 +7,11 @@ import { AppShell, Field, Select } from './components/AppShell.js';
 import { ExecDashboard } from './components/ExecDashboard.js';
 import { ComparisonReport } from './components/ComparisonReport.js';
 import { AdminConsole } from './components/AdminConsole.js';
+import { PluginPanel } from './components/PluginPanel.js';
 import { Login } from './components/Login.js';
 
 type Mode = 'single' | 'compare';
-type ViewName = 'report' | 'admin';
+type ViewName = 'report' | 'admin' | 'plugins';
 
 const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const INITIAL_MODE: Mode = params.get('mode') === 'compare' ? 'compare' : 'single';
@@ -112,6 +113,9 @@ function Authed({ dark, onToggleDark, onLogout }: { dark: boolean; onToggleDark:
         {isAdmin && (
           <button data-testid="nav-admin" onClick={() => setView('admin')} className={`rounded-lg px-2.5 py-1.5 text-sm ${view === 'admin' ? 'bg-tech text-white' : 'text-secondary hover:text-primary'}`}>管理台</button>
         )}
+        {isAdmin && (
+          <button data-testid="nav-plugins" onClick={() => setView('plugins')} className={`rounded-lg px-2.5 py-1.5 text-sm ${view === 'plugins' ? 'bg-tech text-white' : 'text-secondary hover:text-primary'}`}>插件</button>
+        )}
       </nav>
       <span data-testid="user-badge" className="hidden items-center gap-1.5 rounded-pill border border-hairline px-2.5 py-1 text-xs text-secondary sm:inline-flex">
         {s.user.displayName}
@@ -150,6 +154,8 @@ function Authed({ dark, onToggleDark, onLogout }: { dark: boolean; onToggleDark:
   let content: React.ReactNode;
   if (view === 'admin') {
     content = <AdminConsole projects={projects} />;
+  } else if (view === 'plugins') {
+    content = <PluginPanel />;
   } else if (error) {
     content = <p data-testid="error" className="text-critical">{error}</p>;
   } else if (mode === 'single') {
