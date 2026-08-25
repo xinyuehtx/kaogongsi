@@ -57,6 +57,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@tengxiaohtx/auth-core':
+        specifier: workspace:*
+        version: link:../../packages/auth-core
       '@tengxiaohtx/connector-mock':
         specifier: workspace:*
         version: link:../../packages/connector-mock

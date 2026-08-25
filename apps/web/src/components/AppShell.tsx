@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 
-/** 布局骨架：品牌顶栏（含深浅色切换）+ 控制条 + 内容区。 */
+/** 布局骨架：品牌顶栏（品牌 + 右侧导航/用户 + 深浅色切换）+ 控制条 + 内容区。 */
 export function AppShell({
+  brandRight,
   controls,
   children,
   dark,
   onToggleDark,
 }: {
-  controls: ReactNode;
+  brandRight?: ReactNode;
+  controls?: ReactNode;
   children: ReactNode;
   dark: boolean;
   onToggleDark: () => void;
@@ -17,15 +19,14 @@ export function AppShell({
       <header className="sticky top-0 z-10 border-b border-hairline bg-card/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tech text-sm font-bold text-white">
-              考
-            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tech text-sm font-bold text-white">考</span>
             <div className="leading-tight">
               <div className="text-sm font-semibold">考功司</div>
               <div className="text-[11px] text-muted">Agent 评测归因决策机</div>
             </div>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {brandRight}
             <button
               data-testid="theme-toggle"
               onClick={onToggleDark}
@@ -36,9 +37,11 @@ export function AppShell({
             </button>
           </div>
         </div>
-        <div className="border-t border-hairline bg-surface">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-6 py-2.5">{controls}</div>
-        </div>
+        {controls && (
+          <div className="border-t border-hairline bg-surface">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-6 py-2.5">{controls}</div>
+          </div>
+        )}
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-6">{children}</main>

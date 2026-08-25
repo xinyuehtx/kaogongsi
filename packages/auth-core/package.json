@@ -5,7 +5,11 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "exports": {
+    ".": { "types": "./src/index.ts", "default": "./src/index.ts" },
+    "./rbac": { "types": "./src/rbac.ts", "default": "./src/rbac.ts" },
+    "./types": { "types": "./src/types.ts", "default": "./src/types.ts" }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",

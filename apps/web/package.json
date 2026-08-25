@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/auth-core": "workspace:*",
     "@tengxiaohtx/connector-mock": "workspace:*",
     "@tengxiaohtx/l3-metrics": "workspace:*",
     "@tengxiaohtx/l6-report": "workspace:*",
