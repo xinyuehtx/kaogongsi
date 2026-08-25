@@ -5,5 +5,11 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../contracts" },
+    { "path": "../auth-core" },
+    { "path": "../persistence" },
+    { "path": "../run-store" }
+  ]
 }

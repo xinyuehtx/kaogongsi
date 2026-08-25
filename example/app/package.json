@@ -1,0 +1,39 @@
+{
+  "name": "@tengxiaohtx/example-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "types": "./src/assemble.ts", "default": "./src/assemble.ts" } },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'lint: example-app (placeholder)'"
+  },
+  "dependencies": {
+    "@tengxiaohtx/api": "workspace:*",
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/auth-core": "workspace:*",
+    "@tengxiaohtx/persistence": "workspace:*",
+    "@tengxiaohtx/run-store": "workspace:*",
+    "@tengxiaohtx/agent-loop": "workspace:*",
+    "@tengxiaohtx/metrics": "workspace:*",
+    "@tengxiaohtx/pipeline": "workspace:*",
+    "@tengxiaohtx/compare": "workspace:*",
+    "@tengxiaohtx/report": "workspace:*",
+    "@tengxiaohtx/report-llm": "workspace:*",
+    "@tengxiaohtx/plugin-core": "workspace:*",
+    "@tengxiaohtx/ingest": "workspace:*",
+    "@tengxiaohtx/connector-mock": "workspace:*",
+    "@tengxiaohtx/connector-example": "workspace:*",
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

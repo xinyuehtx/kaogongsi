@@ -1,13 +1,4 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { randomUUID } from 'node:crypto';
-import type { DataConnector, LayerContext, ReportGenerator } from '@tengxiaohtx/contracts';
-import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
-import { computeEvaluation } from '@tengxiaohtx/metrics';
-import { buildStages, runPipeline } from '@tengxiaohtx/pipeline';
-import { buildComparison } from '@tengxiaohtx/compare';
-import { MockConnector } from '@tengxiaohtx/connector-mock';
-import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
-import { createReportGenerator } from '@tengxiaohtx/report-llm';
 import {
   ConsoleLogger,
   FileLogger,
@@ -16,9 +7,7 @@ import {
   type Logger,
   type RunStore,
 } from '@tengxiaohtx/run-store';
-import { PluginDataService, PluginHost } from '@tengxiaohtx/plugin-core';
-import { defaultPlugins } from '@tengxiaohtx/plugin-example';
-import { InMemoryDocumentStore, InMemoryKvStore, createPersistence } from '@tengxiaohtx/persistence';
+import { createPersistence } from '@tengxiaohtx/persistence';
 import {
   FileStorage,
   InMemoryStorage,
@@ -34,22 +23,20 @@ import {
   registerUser,
   toPublicUser,
 } from '@tengxiaohtx/auth-core';
+import type { CompareInput, ServerServices } from './ports.js';
 
+export * from './ports.js';
+
+/**
+ * 内核 · HTTP 服务外壳：账号/权限（认证 + RBAC + 管理端）、运行溯源查询、插件配置入库端点。
+ * **不依赖 middleware / connectors**：报告与项目目录经 `ServerServices` 端口注入（由 example 装配）。
+ */
 export interface ServerDeps {
-  connector?: DataConnector; // 换实现即换数据源（D9.2 / AC-7）
-  reportGenerator?: ReportGenerator; // LLM 出口端口（D3）
-  storage?: StoragePort; // 账号/授权存储端口（默认内存，KAOGONGSI_DATA_DIR→文件）
-  jwtSecret?: string;
-  host?: PluginHost; // 全链路插件宿主（RFC-007，默认注册示例插件）
-  runStore?: RunStore; // 运行溯源存储（RFC-009）
+  services: ServerServices; // 组装层注入的领域能力（必需）
+  storage?: StoragePort; // 账号/授权存储端口（默认按防腐层装配：DB → 文件 → 内存）
+  runStore?: RunStore; // 运行溯源存储
   logger?: Logger; // 服务端日志接口
-}
-
-interface CompareBody {
-  projectId: string;
-  baselineId: string;
-  candidateId: string;
-  generateNarrative?: boolean;
+  jwtSecret?: string;
 }
 
 function resolveStorage(deps: ServerDeps, persisted?: StoragePort): StoragePort {
@@ -59,64 +46,17 @@ function resolveStorage(deps: ServerDeps, persisted?: StoragePort): StoragePort 
   return dir ? new FileStorage(dir) : new InMemoryStorage();
 }
 
-export function buildServer(deps: ServerDeps = {}): FastifyInstance {
+export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({ logger: false });
-  const connector: DataConnector = deps.connector ?? new MockConnector();
-  const reportGenerator: ReportGenerator = deps.reportGenerator ?? createReportGenerator();
+  const { projects, reports, plugins } = deps.services;
   // 防腐层装配：env 配了 DATABASE_URL/REDIS_URL 则用 Postgres/Redis，否则回落内存/文件。
   const persistence = createPersistence();
   const storage = resolveStorage(deps, persistence.authStorage);
   const secret = deps.jwtSecret ?? process.env.KAOGONGSI_JWT_SECRET ?? 'dev-insecure-secret';
-  const host = deps.host ?? new PluginHost();
-  if (!deps.host) host.registerAll(defaultPlugins);
   const dataDir = process.env.KAOGONGSI_DATA_DIR;
-  const docStore = persistence.documentStore ?? new InMemoryDocumentStore();
-  const kvStore = persistence.kvStore ?? new InMemoryKvStore();
-  const pluginData = new PluginDataService(() => host.storageSchemas(), docStore, kvStore);
-  const runStore: RunStore = deps.runStore ?? persistence.runStore ?? (dataDir ? new FileRunStore(`${dataDir}/runs`) : new InMemoryRunStore());
+  const runStore: RunStore =
+    deps.runStore ?? persistence.runStore ?? (dataDir ? new FileRunStore(`${dataDir}/runs`) : new InMemoryRunStore());
   const logger: Logger = deps.logger ?? (dataDir ? new FileLogger(`${dataDir}/logs`) : new ConsoleLogger());
-  const now = (): string => new Date().toISOString();
-
-  const drillableOf = (evidenceLevel: string): boolean =>
-    connector.capabilities().drillable && evidenceLevel !== 'metric-only';
-
-  // 六层管道 + 插件 + 溯源：合并目录/派生/外部数据 → 组装管道（归因→决策→报告），
-  // 每层入参落库（除 L1；L1 大对象走连接器按需查），记录连接器两种版本。
-  const runVersion = async (projectId: string, versionId: string, actor?: string): Promise<{ ctx: LayerContext; runId: string }> => {
-    const { version, signals } = await connector.fetchSignals(projectId, versionId);
-    const ev = computeEvaluation(version, host.applyDerivations(signals), host.mergedCatalog(METRIC_CATALOG));
-    for (const e of host.externalData()) {
-      try {
-        ev.kpis[e.group].push(...(await e.fetch({ projectId, versionId }, {})));
-      } catch {
-        /* 外部数据源不可用不阻断报告 */
-      }
-    }
-    const runId = randomUUID();
-    await runStore.putConnectorVersion({ connectorId: connector.id, packageVersion: connector.kind, at: now(), meta: { versionId } });
-    await runStore.startRun({ runId, at: now(), connectorId: connector.id, packageVersion: connector.kind, projectId, versionId, actor });
-    let seq = 0;
-    const stages = buildStages({ layers: ['attribution', 'decision', 'report'], resolve: (l) => host.stageFor(l) });
-    const ctx = await runPipeline(stages, { version, evaluation: ev, drillable: drillableOf(version.evidenceLevel) }, {
-      onStage: async (stage, inputCtx) => {
-        // 落库该层入参（合并前 ctx；不含 L1 signals）
-        await runStore.putLayer({ runId, seq: seq++, layer: stage.layer, stageId: stage.id, input: inputCtx, at: now() });
-      },
-    });
-    logger.info('report.run', { runId, projectId, versionId, actor, connector: connector.id });
-    return { ctx, runId };
-  };
-
-  // 从已存的某层入参重跑（溯源/重试）：不重新拉 L1，直接用落库入参重放上层。
-  const retryRun = async (runId: string): Promise<LayerContext | undefined> => {
-    const { meta, layers } = await runStore.getRun(runId);
-    const first = layers[0];
-    if (!meta || !first) return undefined;
-    const stages = buildStages({ layers: ['attribution', 'decision', 'report'], resolve: (l) => host.stageFor(l) });
-    const ctx = await runPipeline(stages, first.input as LayerContext);
-    logger.info('report.retry', { runId, projectId: meta.projectId, versionId: meta.versionId });
-    return ctx;
-  };
 
   const currentUser = async (req: FastifyRequest): Promise<User | null> => {
     const h = req.headers.authorization;
@@ -221,7 +161,7 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   app.get('/api/projects', async (req, reply) => {
     const u = await requireUser(req, reply);
     if (!u) return;
-    const all = await connector.listProjects();
+    const all = await projects.listProjects();
     const allowed = authorizedProjectIds(u.role, await grantedIds(u), all.map((p) => p.id));
     return all.filter((p) => allowed.includes(p.id));
   });
@@ -231,45 +171,41 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     if (!u) return;
     const { id } = req.params as { id: string };
     if (!canAccessProject(u.role, await grantedIds(u), id)) return reply.code(403).send({ error: '无此项目访问权' });
-    return connector.listVersions(id);
+    return projects.listVersions(id);
   });
 
-  // 单版本报告：信号(L1)→血缘(L2)+指标(L3)→归因(L4)→决策(L5)→exec 视图，按角色过滤分区
+  // 单版本报告：管道由组装层实现；内核只做鉴权 + 按角色过滤分区 + 回传 runId
   app.get('/api/report/version', async (req, reply) => {
     const u = await requireUser(req, reply);
     if (!u) return;
     const { projectId, versionId } = req.query as { projectId?: string; versionId?: string };
     if (!projectId || !versionId) return reply.code(400).send({ error: '缺少 projectId 或 versionId' });
     if (!canAccessProject(u.role, await grantedIds(u), projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const { ctx, runId } = await runVersion(projectId, versionId, u.email);
+    const { view, runId } = await reports.versionReport(projectId, versionId, u.email);
     reply.header('x-run-id', runId);
-    return filterViewForRole(ctx.view!, u.role);
+    return filterViewForRole(view, u.role);
   });
 
   // 两版本对比（+ 可选 LLM/模板生成对比报告）
   app.post('/api/report/compare', async (req, reply) => {
     const u = await requireUser(req, reply);
     if (!u) return;
-    const { projectId, baselineId, candidateId, generateNarrative } = (req.body ?? {}) as CompareBody;
+    const body = (req.body ?? {}) as Partial<CompareInput>;
+    const { projectId, baselineId, candidateId, generateNarrative } = body;
     if (!projectId || !baselineId || !candidateId) return reply.code(400).send({ error: '缺少 projectId / baselineId / candidateId' });
     if (!canAccessProject(u.role, await grantedIds(u), projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const projects = await connector.listProjects();
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) return reply.code(404).send({ error: `未找到项目: ${projectId}` });
-    const [base, cand] = await Promise.all([
-      runVersion(projectId, baselineId, u.email),
-      runVersion(projectId, candidateId, u.email),
-    ]);
-    const toReport = (ctx: LayerContext) => ({ version: ctx.version!, decision: ctx.decision!, kpis: ctx.evaluation!.kpis });
-    const view = buildComparison(project, toReport(base.ctx), toReport(cand.ctx));
-    if (generateNarrative) view.narrative = await reportGenerator.generate({ view });
-    return view;
+    try {
+      return await reports.compare({ projectId, baselineId, candidateId, generateNarrative }, u.email);
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (msg.includes('未找到')) return reply.code(404).send({ error: msg });
+      throw e; // 其余错误按 500 暴露，不掩盖
+    }
   });
 
   // ── 溯源 / 重试 / 连接器版本（RFC-009）──────────────────────
   app.get('/api/runs', async (req, reply) => {
-    const u = await requireUser(req, reply);
-    if (!u) return;
+    if (!(await requireUser(req, reply))) return;
     const { projectId } = req.query as { projectId?: string };
     return runStore.listRuns(projectId ? { projectId } : undefined);
   });
@@ -291,9 +227,10 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const run = await runStore.getRun(runId);
     if (!run.meta) return reply.code(404).send({ error: '未找到运行' });
     if (!canAccessProject(u.role, await grantedIds(u), run.meta.projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const ctx = await retryRun(runId);
-    if (!ctx) return reply.code(400).send({ error: '无可重试的入参' });
-    return filterViewForRole(ctx.view!, u.role);
+    const view = await reports.retryRun(runId);
+    if (!view) return reply.code(400).send({ error: '无可重试的入参' });
+    logger.info('report.retry', { runId, projectId: run.meta.projectId, versionId: run.meta.versionId });
+    return filterViewForRole(view, u.role);
   });
 
   app.get('/api/connector-versions', async (req, reply) => {
@@ -305,22 +242,15 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   // ── 插件（RFC-007）：清单 / UI DSL 表单 / 用户输入入库 ──────
   app.get('/api/plugins', async (req, reply) => {
     if (!(await requireUser(req, reply))) return;
-    return host.plugins().map((p) => ({
-      id: p.id,
-      name: p.name,
-      version: p.version,
-      layers: p.layers,
-      forms: p.forms ?? [],
-      storage: (p.storage ?? []).map((s) => s.collection),
-      skills: (p.skills ?? []).map((s) => ({ id: s.id, label: s.label })),
-    }));
+    return plugins?.list() ?? [];
   });
 
   app.get('/api/plugins/data/:collection/:id', async (req, reply) => {
     if (!(await requireUser(req, reply))) return;
+    if (!plugins) return reply.code(404).send({ error: '未装配插件目录' });
     const { collection, id } = req.params as { collection: string; id: string };
     try {
-      return { data: (await pluginData.load(collection, id)) ?? null };
+      return { data: (await plugins.loadData(collection, id)) ?? null };
     } catch (e) {
       return reply.code(404).send({ error: (e as Error).message });
     }
@@ -328,54 +258,14 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
 
   app.post('/api/plugins/data/:collection/:id', async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return; // 配置入库仅管理员
+    if (!plugins) return reply.code(404).send({ error: '未装配插件目录' });
     const { collection, id } = req.params as { collection: string; id: string };
     try {
-      return await pluginData.save(collection, id, (req.body ?? {}) as Record<string, unknown>);
+      return await plugins.saveData(collection, id, (req.body ?? {}) as Record<string, unknown>);
     } catch (e) {
       return reply.code(400).send({ error: (e as Error).message });
     }
   });
 
   return app;
-}
-
-/**
- * 按部署环境构建轨迹接入连接器（RFC-006）。未配置 KAOGONGSI_INGEST 则返回 undefined（用默认 Mock）。
- *  - KAOGONGSI_INGEST=file:/path | http(s)://host/api/traces
- *  - KAOGONGSI_PARSERS=claude-code,langfuse,…（选配解析器插件；空=全部）
- *  - KAOGONGSI_INGEST_HEADERS（JSON，http 自定义 header）/ _TAGS / _FROM / _TO / _FORMAT
- */
-export async function resolveIngestConnector(): Promise<DataConnector | undefined> {
-  const spec = process.env.KAOGONGSI_INGEST;
-  if (!spec) return undefined;
-  const parsers = process.env.KAOGONGSI_PARSERS?.split(',').map((s) => s.trim()).filter(Boolean);
-  const registry = createRegistry(parsers);
-  const query = {
-    timeFrom: process.env.KAOGONGSI_INGEST_FROM,
-    timeTo: process.env.KAOGONGSI_INGEST_TO,
-    tags: process.env.KAOGONGSI_INGEST_TAGS?.split(',').map((s) => s.trim()).filter(Boolean),
-  };
-  const format = process.env.KAOGONGSI_INGEST_FORMAT;
-  let source;
-  if (/^https?:/.test(spec)) {
-    const headers = process.env.KAOGONGSI_INGEST_HEADERS ? (JSON.parse(process.env.KAOGONGSI_INGEST_HEADERS) as Record<string, string>) : undefined;
-    source = new HttpSource(spec, { headers });
-  } else {
-    source = new FileSource(spec.startsWith('file:') ? spec.slice('file:'.length) : spec);
-  }
-  return createIngestConnector({ source, registry, query, format });
-}
-
-// 仅在直接运行时监听（被测试 import 时不监听）
-const isMain = import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
-  const port = Number(process.env.PORT ?? 3001);
-  resolveIngestConnector()
-    .then((connector) => buildServer(connector ? { connector } : {}))
-    .then((app) => app.listen({ port, host: '0.0.0.0' }))
-    .then(() => console.log(`api listening on :${port}${process.env.KAOGONGSI_INGEST ? ` (ingest: ${process.env.KAOGONGSI_INGEST})` : ''}`))
-    .catch((err) => {
-      console.error(err);
-      process.exit(1);
-    });
 }

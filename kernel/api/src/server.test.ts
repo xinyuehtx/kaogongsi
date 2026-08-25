@@ -1,16 +1,69 @@
 import { describe, it, expect } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import type { ComparisonView, DataConnector, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
+import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
 import { InMemoryStorage } from '@tengxiaohtx/auth-core';
-import { MockConnector } from '@tengxiaohtx/connector-mock';
-import { FileSource, createIngestConnector } from '@tengxiaohtx/ingest';
-import { buildServer } from './server.js';
+import { InMemoryRunStore } from '@tengxiaohtx/run-store';
+import { buildServer, type ServerServices } from './server.js';
 
-/** 每个测试用独立 storage，避免"首用户=admin"跨测试串味。 */
-function freshServer(extra: Parameters<typeof buildServer>[0] = {}) {
-  return buildServer({ storage: new InMemoryStorage(), jwtSecret: 'test', ...extra });
+/**
+ * 内核 api 的独立测试：**不依赖 middleware/connectors**，用桩 services 验证
+ * 认证 / 管理端 / 项目授权 / 角色分区过滤 / 溯源端点。
+ * 真实装配（连接器 + 分层管道 + 插件）的集成测试在 example/app。
+ */
+
+const project: ProjectSummary = { id: 'p1', name: '项目一', description: '' };
+const otherProject: ProjectSummary = { id: 'p2', name: '项目二', description: '' };
+const version: VersionSummary = { id: 'v1', projectId: 'p1', label: 'v1', createdAt: '2026-08-01', harnessConfigVersion: 'h', evidenceLevel: 'full' };
+
+const stubView = (): ReportView => ({
+  audience: 'exec',
+  drillable: true,
+  sections: [
+    { title: '归因分布', kind: 'attribution', data: {}, sourceLineage: [] },
+    { title: '质量', kind: 'kpi', data: [], sourceLineage: [] },
+    { title: '财务', kind: 'kpi', data: [], sourceLineage: [] },
+    { title: '决策依据', kind: 'drilldown', data: {}, sourceLineage: [] },
+  ],
+});
+
+function stubServices(runStore: InMemoryRunStore): ServerServices {
+  return {
+    projects: {
+      async listProjects() {
+        return [project, otherProject];
+      },
+      async listVersions() {
+        return [version];
+      },
+    },
+    reports: {
+      async versionReport(projectId, versionId, actor) {
+        const runId = `run-${projectId}-${versionId}`;
+        await runStore.startRun({ runId, at: 't', connectorId: 'stub', projectId, versionId, actor });
+        await runStore.putLayer({ runId, seq: 0, layer: 'attribution', stageId: 'stub', input: { seeded: true }, at: 't' });
+        return { view: stubView(), runId };
+      },
+      async compare(input) {
+        return { project, baseline: version, candidate: version, groups: [], gateBaseline: 'GO', gateCandidate: 'GO', narrative: input.generateNarrative ? { summary: 's', highlights: [], regressions: [], recommendation: '', verdict: 'GO', generatedBy: 'template' } : undefined } as ComparisonView;
+      },
+      async retryRun() {
+        return stubView();
+      },
+    },
+    plugins: {
+      list: () => [{ id: 'stub-plugin', name: '桩插件', version: '1.0.0', layers: ['L4'], forms: [], storage: ['cfg'], skills: [] }],
+      async loadData() {
+        return { id: 'default' };
+      },
+      async saveData(_c, id, input) {
+        return { id, ...input };
+      },
+    },
+  };
+}
+
+function freshServer() {
+  const runStore = new InMemoryRunStore();
+  return buildServer({ services: stubServices(runStore), storage: new InMemoryStorage(), runStore, jwtSecret: 'test' });
 }
 
 async function registerAndToken(app: ReturnType<typeof buildServer>, email = 'admin@x.com'): Promise<string> {
@@ -19,7 +72,7 @@ async function registerAndToken(app: ReturnType<typeof buildServer>, email = 'ad
 }
 const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
-describe('api: 健康 + 认证', () => {
+describe('kernel/api: 健康 + 认证', () => {
   it('GET /health 返回 ok', async () => {
     const res = await freshServer().inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
@@ -30,200 +83,86 @@ describe('api: 健康 + 认证', () => {
     const app = freshServer();
     const res = await app.inject({ method: 'POST', url: '/api/auth/register', payload: { email: 'boss@x.com', password: 'pw' } });
     expect(res.statusCode).toBe(201);
-    const body = res.json() as { token: string; user: { role: string } };
-    expect(body.token).toBeTruthy();
-    expect(body.user.role).toBe('admin');
+    expect((res.json() as { user: { role: string } }).user.role).toBe('admin');
   });
 
-  it('/api/auth/me 需要 Bearer 令牌', async () => {
+  it('未认证访问数据端点 ⇒ 401', async () => {
     const app = freshServer();
     expect((await app.inject({ method: 'GET', url: '/api/auth/me' })).statusCode).toBe(401);
-    const token = await registerAndToken(app);
-    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: auth(token) });
-    expect(me.statusCode).toBe(200);
-    expect((me.json() as { user: { role: string } }).user.role).toBe('admin');
+    expect((await app.inject({ method: 'GET', url: '/api/projects' })).statusCode).toBe(401);
   });
 });
 
-describe('api: 数据端点需认证 + 授权', () => {
-  it('未认证访问 /api/projects ⇒ 401', async () => {
-    const res = await freshServer().inject({ method: 'GET', url: '/api/projects' });
-    expect(res.statusCode).toBe(401);
-  });
-
-  it('admin 看到全部项目', async () => {
+describe('kernel/api: 项目授权 + 角色分区（RBAC）', () => {
+  it('非 admin 仅见被授权项目；越权访问版本 ⇒ 403', async () => {
     const app = freshServer();
-    const token = await registerAndToken(app);
-    const res = await app.inject({ method: 'GET', url: '/api/projects', headers: auth(token) });
-    expect(res.statusCode).toBe(200);
-    expect((res.json() as ProjectSummary[]).length).toBeGreaterThan(0);
-  });
-
-  it('非 admin 只看到被授权的项目；越权访问版本 ⇒ 403', async () => {
-    const app = freshServer();
-    const adminToken = await registerAndToken(app); // 首个=admin
-    // 管理员建一个 bi 用户并只授权 dt-sheet
+    const adminToken = await registerAndToken(app);
     const created = await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
     const biId = (created.json() as { id: string }).id;
-    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: biId, projectId: 'dt-sheet' } });
-    const biToken = (await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } }).then((r) => r.json())) as { token: string };
+    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: biId, projectId: 'p1' } });
+    const biToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } })).json() as { token: string }).token;
 
-    const projects = await app.inject({ method: 'GET', url: '/api/projects', headers: auth(biToken.token) });
-    expect((projects.json() as ProjectSummary[]).map((p) => p.id)).toEqual(['dt-sheet']);
-
-    const denied = await app.inject({ method: 'GET', url: '/api/projects/fs-doc/versions', headers: auth(biToken.token) });
-    expect(denied.statusCode).toBe(403);
-    const ok = await app.inject({ method: 'GET', url: '/api/projects/dt-sheet/versions', headers: auth(biToken.token) });
-    expect((ok.json() as VersionSummary[]).length).toBeGreaterThan(0);
+    const visible = (await app.inject({ method: 'GET', url: '/api/projects', headers: auth(biToken) })).json() as ProjectSummary[];
+    expect(visible.map((p) => p.id)).toEqual(['p1']);
+    expect((await app.inject({ method: 'GET', url: '/api/projects/p2/versions', headers: auth(biToken) })).statusCode).toBe(403);
   });
 
-  it('管理端仅 admin 可用（bi ⇒ 403）', async () => {
+  it('管理端仅 admin（bi ⇒ 403）', async () => {
     const app = freshServer();
     const adminToken = await registerAndToken(app);
     await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
     const biToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } })).json() as { token: string }).token;
     expect((await app.inject({ method: 'GET', url: '/api/admin/users', headers: auth(biToken) })).statusCode).toBe(403);
   });
-});
 
-describe('api: 报告（六层管道）+ 角色过滤', () => {
-  it('GET /api/report/version 返回 exec 视图（admin 全分区）', async () => {
-    const app = freshServer();
-    const token = await registerAndToken(app);
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
-    expect(res.statusCode).toBe(200);
-    const view = res.json() as ReportView;
-    expect(view.audience).toBe('exec');
-    expect(view.decision?.gate).toBeDefined();
-    expect(view.sections.map((s) => s.title)).toContain('决策依据');
-  });
-
-  it('finance 角色只见财务/归因/依据分区', async () => {
+  it('finance 角色只见财务/归因/依据分区（内核按角色过滤）', async () => {
     const app = freshServer();
     const adminToken = await registerAndToken(app);
     await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'fin@x.com', password: 'pw', role: 'finance' } });
     const finId = ((await app.inject({ method: 'GET', url: '/api/admin/users', headers: auth(adminToken) })).json() as { id: string; email: string }[]).find((u) => u.email === 'fin@x.com')!.id;
-    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: finId, projectId: 'dt-sheet' } });
+    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: finId, projectId: 'p1' } });
     const finToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'fin@x.com', password: 'pw' } })).json() as { token: string }).token;
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(finToken) });
-    const titles = (res.json() as ReportView).sections.map((s) => s.title);
-    expect(titles).toEqual(['归因分布', '财务', '决策依据']);
-  });
-
-  it('POST /api/report/compare 返回对比视图（+ 生成叙述）', async () => {
-    const app = freshServer();
-    const token = await registerAndToken(app);
-    const res = await app.inject({ method: 'POST', url: '/api/report/compare', headers: auth(token), payload: { projectId: 'dt-sheet', baselineId: 'v1.0', candidateId: 'v2.0', generateNarrative: true } });
-    expect(res.statusCode).toBe(200);
-    const view = res.json() as ComparisonView;
-    expect(view.baseline.id).toBe('v1.0');
-    expect(view.narrative).toBeDefined();
-  });
-
-  it('AC-7 隔离性：换连接器（假 L5，同接口）路由零改动', async () => {
-    class FakeL5Connector extends MockConnector {
-      override readonly kind = 'l5-decision';
-    }
-    const app = freshServer({ connector: new FakeL5Connector({ id: 'fake-l5' }) as DataConnector });
-    const token = await registerAndToken(app);
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
-    expect((res.json() as ReportView).audience).toBe('exec');
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=p1&versionId=v1', headers: auth(finToken) });
+    expect((res.json() as ReportView).sections.map((s) => s.title)).toEqual(['归因分布', '财务', '决策依据']);
   });
 });
 
-describe('api: 插件系统（RFC-007）', () => {
-  it('GET /api/plugins 列出示例插件（含 UI DSL 表单）', async () => {
+describe('kernel/api: 报告/溯源端点（经注入的 ReportService）', () => {
+  it('单版本报告回传 x-run-id；缺参 400', async () => {
     const app = freshServer();
     const token = await registerAndToken(app);
-    const plugins = (await app.inject({ method: 'GET', url: '/api/plugins', headers: auth(token) })).json() as { id: string; forms: unknown[] }[];
-    const example = plugins.find((p) => p.id === 'example');
-    expect(example).toBeDefined();
-    expect(example?.forms.length).toBeGreaterThan(0);
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=p1&versionId=v1', headers: auth(token) });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['x-run-id']).toBe('run-p1-v1');
+    expect((await app.inject({ method: 'GET', url: '/api/report/version?projectId=p1', headers: auth(token) })).statusCode).toBe(400);
   });
 
-  it('管理员按 UI DSL 存储用户输入，读回一致；非管理员不可写', async () => {
+  it('对比端点：缺参 400，带 generateNarrative 透传', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    expect((await app.inject({ method: 'POST', url: '/api/report/compare', headers: auth(token), payload: { projectId: 'p1' } })).statusCode).toBe(400);
+    const ok = await app.inject({ method: 'POST', url: '/api/report/compare', headers: auth(token), payload: { projectId: 'p1', baselineId: 'v1', candidateId: 'v1', generateNarrative: true } });
+    expect((ok.json() as ComparisonView).narrative).toBeDefined();
+  });
+
+  it('溯源：/api/runs/:id 返回每层入参；retry 重放', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    await app.inject({ method: 'GET', url: '/api/report/version?projectId=p1&versionId=v1', headers: auth(token) });
+    const run = (await app.inject({ method: 'GET', url: '/api/runs/run-p1-v1', headers: auth(token) })).json() as { layers: { layer: string }[] };
+    expect(run.layers.map((l) => l.layer)).toEqual(['attribution']);
+    expect((await app.inject({ method: 'POST', url: '/api/runs/run-p1-v1/retry', headers: auth(token) })).statusCode).toBe(200);
+  });
+});
+
+describe('kernel/api: 插件端点（经注入的 PluginDirectory）', () => {
+  it('列插件；写配置仅 admin', async () => {
     const app = freshServer();
     const adminToken = await registerAndToken(app);
-    const save = await app.inject({ method: 'POST', url: '/api/plugins/data/finance_config/default', headers: auth(adminToken), payload: { endpoint: 'https://fin', apiKey: 'sk', currency: 'CNY' } });
-    expect(save.statusCode).toBe(200);
-    const loaded = (await app.inject({ method: 'GET', url: '/api/plugins/data/finance_config/default', headers: auth(adminToken) })).json() as { data: { endpoint: string } };
-    expect(loaded.data.endpoint).toBe('https://fin');
-
-    // bi 用户不可写配置
+    expect(((await app.inject({ method: 'GET', url: '/api/plugins', headers: auth(adminToken) })).json() as { id: string }[])[0]?.id).toBe('stub-plugin');
     await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
     const biToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } })).json() as { token: string }).token;
-    const denied = await app.inject({ method: 'POST', url: '/api/plugins/data/finance_config/default', headers: auth(biToken), payload: { endpoint: 'x' } });
-    expect(denied.statusCode).toBe(403);
-  });
-
-  it('外部数据（财务）经插件并入报告财务分区', async () => {
-    const app = freshServer();
-    const token = await registerAndToken(app);
-    const view = (await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) })).json() as ReportView;
-    const financial = view.sections.find((s) => s.title === '财务')?.data as { key: string }[];
-    expect(financial.some((k) => k.key === 'gross_margin')).toBe(true); // 来自 example 插件外部数据
-  });
-});
-
-describe('api: 运行溯源 / 重试 / 连接器版本（RFC-009）', () => {
-  it('出报告后可按 runId 溯源每层入参，并重试重放', async () => {
-    const app = freshServer();
-    const token = await registerAndToken(app);
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
-    const runId = res.headers['x-run-id'] as string;
-    expect(runId).toBeTruthy();
-
-    const run = (await app.inject({ method: 'GET', url: `/api/runs/${runId}`, headers: auth(token) })).json() as { meta: { versionId: string }; layers: { layer: string }[] };
-    expect(run.meta.versionId).toBe('v2.0');
-    // 每层入参落库（除 L1）：attribution/decision/report
-    expect(run.layers.map((l) => l.layer)).toEqual(['attribution', 'decision', 'report']);
-
-    const retry = await app.inject({ method: 'POST', url: `/api/runs/${runId}/retry`, headers: auth(token) });
-    expect(retry.statusCode).toBe(200);
-    expect((retry.json() as ReportView).audience).toBe('exec');
-  });
-
-  it('记录连接器版本；/api/connector-versions 可查', async () => {
-    const app = freshServer();
-    const token = await registerAndToken(app);
-    await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
-    const versions = (await app.inject({ method: 'GET', url: '/api/connector-versions', headers: auth(token) })).json() as { connectorId: string }[];
-    expect(versions.length).toBeGreaterThan(0);
-    expect(versions[0]?.connectorId).toBeTruthy();
-  });
-});
-
-describe('api: 轨迹接入连接器（RFC-006，端到端）', () => {
-  function claudeRun(version: string, verdict: 'pass' | 'fail'): unknown {
-    return [
-      { type: 'user', sessionId: 's', cwd: '/work/dt-sheet', gitBranch: version, message: { role: 'user', content: 'x' } },
-      { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'bash', input: {} }] } },
-      { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', name: 'bash', content: 'ok', is_error: false }] } },
-      { type: 'result', verdict, costUsd: 0.02, usage: { total_tokens: 900 } },
-    ];
-  }
-
-  it('注入 IngestConnector：文件夹轨迹 → /api/projects + /api/report/version 六层管道', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'api-ingest-'));
-    try {
-      mkdirSync(join(dir, 'dt-sheet'), { recursive: true });
-      writeFileSync(join(dir, 'dt-sheet', 'r1.json'), JSON.stringify(claudeRun('v2.0', 'pass')));
-      writeFileSync(join(dir, 'dt-sheet', 'r2.json'), JSON.stringify(claudeRun('v2.0', 'fail')));
-      const connector = await createIngestConnector({ source: new FileSource(dir) });
-      const app = freshServer({ connector });
-      const token = await registerAndToken(app);
-
-      const projects = (await app.inject({ method: 'GET', url: '/api/projects', headers: auth(token) })).json() as ProjectSummary[];
-      expect(projects.map((p) => p.id)).toContain('dt-sheet');
-
-      const view = (await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) })).json() as ReportView;
-      expect(view.audience).toBe('exec');
-      const quality = view.sections.find((s) => s.title === '质量');
-      expect(quality).toBeDefined();
-      const kpis = quality?.data as { key: string; value: number }[];
-      expect(kpis.find((k) => k.key === 'success_rate')?.value).toBe(50); // 1 pass / 2
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    expect((await app.inject({ method: 'POST', url: '/api/plugins/data/cfg/default', headers: auth(biToken), payload: {} })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'POST', url: '/api/plugins/data/cfg/default', headers: auth(adminToken), payload: { a: 1 } })).statusCode).toBe(200);
   });
 });

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": ["node"] },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../../kernel/api" },
+    { "path": "../../kernel/contracts" },
+    { "path": "../../kernel/auth-core" },
+    { "path": "../../kernel/persistence" },
+    { "path": "../../kernel/run-store" },
+    { "path": "../../kernel/agent-loop" },
+    { "path": "../../middleware/metrics" },
+    { "path": "../../middleware/pipeline" },
+    { "path": "../../middleware/compare" },
+    { "path": "../../middleware/report" },
+    { "path": "../../middleware/report-llm" },
+    { "path": "../../middleware/plugin-core" },
+    { "path": "../../middleware/ingest" },
+    { "path": "../../connectors/mock" },
+    { "path": "../../connectors/example" }
+  ]
+}

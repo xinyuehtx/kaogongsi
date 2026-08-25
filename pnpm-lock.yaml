@@ -56,6 +56,70 @@ importers:
         specifier: ^1.50.0
         version: 1.62.1
 
+  example/app:
+    dependencies:
+      '@tengxiaohtx/agent-loop':
+        specifier: workspace:*
+        version: link:../../kernel/agent-loop
+      '@tengxiaohtx/api':
+        specifier: workspace:*
+        version: link:../../kernel/api
+      '@tengxiaohtx/auth-core':
+        specifier: workspace:*
+        version: link:../../kernel/auth-core
+      '@tengxiaohtx/compare':
+        specifier: workspace:*
+        version: link:../../middleware/compare
+      '@tengxiaohtx/connector-example':
+        specifier: workspace:*
+        version: link:../../connectors/example
+      '@tengxiaohtx/connector-mock':
+        specifier: workspace:*
+        version: link:../../connectors/mock
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../kernel/contracts
+      '@tengxiaohtx/ingest':
+        specifier: workspace:*
+        version: link:../../middleware/ingest
+      '@tengxiaohtx/metrics':
+        specifier: workspace:*
+        version: link:../../middleware/metrics
+      '@tengxiaohtx/persistence':
+        specifier: workspace:*
+        version: link:../../kernel/persistence
+      '@tengxiaohtx/pipeline':
+        specifier: workspace:*
+        version: link:../../middleware/pipeline
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../middleware/plugin-core
+      '@tengxiaohtx/report':
+        specifier: workspace:*
+        version: link:../../middleware/report
+      '@tengxiaohtx/report-llm':
+        specifier: workspace:*
+        version: link:../../middleware/report-llm
+      '@tengxiaohtx/run-store':
+        specifier: workspace:*
+        version: link:../../kernel/run-store
+      fastify:
+        specifier: ^5.2.0
+        version: 5.12.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
   kernel/agent-loop:
     dependencies:
       '@tengxiaohtx/contracts':
@@ -90,39 +154,12 @@ importers:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
         version: link:../auth-core
-      '@tengxiaohtx/compare':
-        specifier: workspace:*
-        version: link:../../middleware/compare
-      '@tengxiaohtx/connector-mock':
-        specifier: workspace:*
-        version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tengxiaohtx/ingest':
-        specifier: workspace:*
-        version: link:../../middleware/ingest
-      '@tengxiaohtx/metrics':
-        specifier: workspace:*
-        version: link:../../middleware/metrics
       '@tengxiaohtx/persistence':
         specifier: workspace:*
         version: link:../persistence
-      '@tengxiaohtx/pipeline':
-        specifier: workspace:*
-        version: link:../../middleware/pipeline
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../../middleware/plugin-core
-      '@tengxiaohtx/plugin-example':
-        specifier: workspace:*
-        version: link:../../connectors/example
-      '@tengxiaohtx/report':
-        specifier: workspace:*
-        version: link:../../middleware/report
-      '@tengxiaohtx/report-llm':
-        specifier: workspace:*
-        version: link:../../middleware/report-llm
       '@tengxiaohtx/run-store':
         specifier: workspace:*
         version: link:../run-store
@@ -133,9 +170,6 @@ importers:
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1
-      tsx:
-        specifier: ^4.19.0
-        version: 4.23.12
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
