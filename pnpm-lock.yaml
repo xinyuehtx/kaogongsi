@@ -56,6 +56,19 @@ importers:
         specifier: ^1.50.0
         version: 1.62.1
 
+  kernel/agent-loop:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../middleware/contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
   kernel/aisdk:
     dependencies:
       '@tengxiaohtx/contracts':

@@ -1,17 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import type { CanonicalSignal, Kpi, MetricDef } from '@tengxiaohtx/contracts';
+import type { CanonicalSignal, Kpi, LlmProvider, MetricDef } from '@tengxiaohtx/contracts';
 import {
   InMemoryDocumentStore,
   InMemoryKvStore,
-  MockLLMProvider,
   PluginDataService,
   PluginHost,
-  renderSkill,
   validateInput,
   type Plugin,
 } from './index.js';
 
 const METRIC: MetricDef = { key: 'human_rating', label: '人工评分', unit: '分', group: 'quality', betterWhen: 'higher', target: 4 };
+const fakeProvider: LlmProvider = { id: 'fake-llm', async generateText() { return 'ok'; } };
 
 // 一个横跨 L1-L6 的示例插件
 const megaPlugin: Plugin = {
@@ -20,7 +19,7 @@ const megaPlugin: Plugin = {
   version: '1.0.0',
   layers: ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'],
   dataSources: [{ id: 'demo-http', label: 'Demo HTTP', kind: 'http', create: () => ({ kind: 'http', async collect() { return { items: [] }; } }) }],
-  llmProviders: [new MockLLMProvider()],
+  llmProviders: [fakeProvider],
   metrics: [{
     def: METRIC,
     derive: (signals) => signals.filter((s) => s.metricKey === 'success_rate').map((s) => ({ ...s, caseId: `${s.caseId}:derived`, metricKey: 'human_rating', observation: 4 })),
@@ -43,7 +42,7 @@ describe('plugin-core: PluginHost 跨层聚合', () => {
 
   it('一个插件贡献 L1-L6 能力，宿主分类暴露', () => {
     expect(host.dataSources().map((d) => d.id)).toEqual(['demo-http']);
-    expect(host.llmProvider()?.id).toBe('mock-llm');
+    expect(host.llmProvider()?.id).toBe('fake-llm');
     expect(host.metricDefs().map((m) => m.key)).toEqual(['human_rating']);
     expect(host.externalData().map((e) => e.id)).toEqual(['finance']);
     expect(host.skills().map((s) => s.id)).toEqual(['exec-brief']);
@@ -94,17 +93,7 @@ describe('plugin-core: 存储（NoSQL + Redis）', () => {
   });
 });
 
-describe('plugin-core: LLM/Skill/校验', () => {
-  it('renderSkill 填充占位符', () => {
-    const r = renderSkill(megaPlugin.skills![0]!, { role: '报告官', project: '钉钉表格' });
-    expect(r.system).toBe('你是报告官');
-    expect(r.prompt).toContain('钉钉表格');
-  });
-  it('MockLLMProvider 确定性', async () => {
-    const p = new MockLLMProvider();
-    expect(await p.generateText({ prompt: 'hi' })).toContain('mock-llm');
-    expect(await p.generateText({ prompt: 'hi', json: true })).toContain('generatedBy');
-  });
+describe('plugin-core: 校验', () => {
   it('validateInput 校验必填/数字', () => {
     const errs = validateInput(megaPlugin.forms![0]!.fields, { endpoint: '', apiKey: 'k' });
     expect(errs.some((e) => e.includes('接口地址'))).toBe(true);
