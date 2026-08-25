@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { DecisionRecord, Kpi, KpiSet, ProjectSummary, VersionReport, VersionSummary } from '@tengxiaohtx/contracts';
 import { buildComparison } from '@tengxiaohtx/l6-compare';
 import {
+  LlmProviderReportGenerator,
   OpenAiCompatibleReportGenerator,
   TemplateReportGenerator,
   createReportGenerator,
@@ -108,5 +109,36 @@ describe('report-llm: OpenAiCompatibleReportGenerator（注入 fetch，无网络
     const failFetch = (async () => new Response('nope', { status: 500 })) as unknown as typeof fetch;
     const g = new OpenAiCompatibleReportGenerator({ baseUrl: 'http://x/v1', apiKey: 'k', model: 'm', fetchImpl: failFetch });
     await expect(g.generate({ view: improvedView() })).rejects.toThrow();
+  });
+});
+
+describe('report-llm: LlmProviderReportGenerator（插件 LLM + Skill）', () => {
+  it('经 LlmProvider 生成，套用 skill 模板，解析 JSON', async () => {
+    let sawSystem = '';
+    let sawPrompt = '';
+    const provider = {
+      id: 'fake',
+      model: 'fake-1',
+      async generateText(o: { system?: string; prompt: string }) {
+        sawSystem = o.system ?? '';
+        sawPrompt = o.prompt;
+        return JSON.stringify({ summary: '候选更优', highlights: ['成功率↑'], regressions: [], recommendation: '继续', verdict: 'GO' });
+      },
+    };
+    const skill = { id: 's', label: '简报', scope: 'compare' as const, system: '你是{{role}}', template: '为 {{project}} 写简报' };
+    const g = new LlmProviderReportGenerator(provider, skill);
+    const n = await g.generate({ view: improvedView() });
+    expect(n.generatedBy).toBe('llm');
+    expect(n.model).toBe('fake-1');
+    expect(n.verdict).toBe('GO');
+    expect(sawSystem).toContain('考功司报告官'); // {{role}} 已填充
+    expect(sawPrompt).toContain('测试项目'); // skill 模板 + 对比数据
+  });
+
+  it('provider 返回非 JSON ⇒ 退化为 summary + 派生 verdict', async () => {
+    const provider = { id: 'f', async generateText() { return '一段自由文本'; } };
+    const n = await new LlmProviderReportGenerator(provider).generate({ view: improvedView() });
+    expect(n.summary).toContain('自由文本');
+    expect(['GO', 'NO_GO', 'ABSTAIN']).toContain(n.verdict);
   });
 });

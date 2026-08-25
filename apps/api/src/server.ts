@@ -1,11 +1,19 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type { DataConnector, ReportGenerator } from '@tengxiaohtx/contracts';
+import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
 import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
 import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
 import { buildComparison } from '@tengxiaohtx/l6-compare';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
 import { createReportGenerator } from '@tengxiaohtx/report-llm';
+import {
+  InMemoryDocumentStore,
+  InMemoryKvStore,
+  PluginDataService,
+  PluginHost,
+} from '@tengxiaohtx/plugin-core';
+import { defaultPlugins } from '@tengxiaohtx/plugin-example';
 import {
   FileStorage,
   InMemoryStorage,
@@ -27,6 +35,7 @@ export interface ServerDeps {
   reportGenerator?: ReportGenerator; // LLM 出口端口（D3）
   storage?: StoragePort; // 账号/授权存储端口（默认内存，KAOGONGSI_DATA_DIR→文件）
   jwtSecret?: string;
+  host?: PluginHost; // 全链路插件宿主（RFC-007，默认注册示例插件）
 }
 
 interface CompareBody {
@@ -48,9 +57,26 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   const reportGenerator: ReportGenerator = deps.reportGenerator ?? createReportGenerator();
   const storage = resolveStorage(deps);
   const secret = deps.jwtSecret ?? process.env.KAOGONGSI_JWT_SECRET ?? 'dev-insecure-secret';
+  const host = deps.host ?? new PluginHost();
+  if (!deps.host) host.registerAll(defaultPlugins);
+  const pluginData = new PluginDataService(() => host.storageSchemas(), new InMemoryDocumentStore(), new InMemoryKvStore());
 
   const drillableOf = (evidenceLevel: string): boolean =>
     connector.capabilities().drillable && evidenceLevel !== 'metric-only';
+
+  // 六层管道 + 插件：合并指标目录 + 派生信号 + 并入外部数据（财务/BI）
+  const buildVersionReport = async (projectId: string, versionId: string) => {
+    const { version, signals } = await connector.fetchSignals(projectId, versionId);
+    const ev = computeEvaluation(version, host.applyDerivations(signals), host.mergedCatalog(METRIC_CATALOG));
+    for (const e of host.externalData()) {
+      try {
+        ev.kpis[e.group].push(...(await e.fetch({ projectId, versionId }, {})));
+      } catch {
+        /* 外部数据源不可用不阻断报告 */
+      }
+    }
+    return assembleVersionReport(ev);
+  };
 
   const currentUser = (req: FastifyRequest): User | null => {
     const h = req.headers.authorization;
@@ -174,9 +200,8 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const { projectId, versionId } = req.query as { projectId?: string; versionId?: string };
     if (!projectId || !versionId) return reply.code(400).send({ error: '缺少 projectId 或 versionId' });
     if (!canAccessProject(u.role, grantedIds(u), projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const { version, signals } = await connector.fetchSignals(projectId, versionId);
-    const report = assembleVersionReport(computeEvaluation(version, signals));
-    const view = buildExecReportView(report.decision, report.kpis, { drillable: drillableOf(version.evidenceLevel) });
+    const report = await buildVersionReport(projectId, versionId);
+    const view = buildExecReportView(report.decision, report.kpis, { drillable: drillableOf(report.version.evidenceLevel) });
     return filterViewForRole(view, u.role);
   });
 
@@ -190,15 +215,47 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const projects = await connector.listProjects();
     const project = projects.find((p) => p.id === projectId);
     if (!project) return reply.code(404).send({ error: `未找到项目: ${projectId}` });
-    const [base, cand] = await Promise.all([
-      connector.fetchSignals(projectId, baselineId),
-      connector.fetchSignals(projectId, candidateId),
+    const [baseline, candidate] = await Promise.all([
+      buildVersionReport(projectId, baselineId),
+      buildVersionReport(projectId, candidateId),
     ]);
-    const baseline = assembleVersionReport(computeEvaluation(base.version, base.signals));
-    const candidate = assembleVersionReport(computeEvaluation(cand.version, cand.signals));
     const view = buildComparison(project, baseline, candidate);
     if (generateNarrative) view.narrative = await reportGenerator.generate({ view });
     return view;
+  });
+
+  // ── 插件（RFC-007）：清单 / UI DSL 表单 / 用户输入入库 ──────
+  app.get('/api/plugins', async (req, reply) => {
+    if (!requireUser(req, reply)) return;
+    return host.plugins().map((p) => ({
+      id: p.id,
+      name: p.name,
+      version: p.version,
+      layers: p.layers,
+      forms: p.forms ?? [],
+      storage: (p.storage ?? []).map((s) => s.collection),
+      skills: (p.skills ?? []).map((s) => ({ id: s.id, label: s.label })),
+    }));
+  });
+
+  app.get('/api/plugins/data/:collection/:id', async (req, reply) => {
+    if (!requireUser(req, reply)) return;
+    const { collection, id } = req.params as { collection: string; id: string };
+    try {
+      return { data: (await pluginData.load(collection, id)) ?? null };
+    } catch (e) {
+      return reply.code(404).send({ error: (e as Error).message });
+    }
+  });
+
+  app.post('/api/plugins/data/:collection/:id', async (req, reply) => {
+    if (!requireAdmin(req, reply)) return; // 配置入库仅管理员
+    const { collection, id } = req.params as { collection: string; id: string };
+    try {
+      return await pluginData.save(collection, id, (req.body ?? {}) as Record<string, unknown>);
+    } catch (e) {
+      return reply.code(400).send({ error: (e as Error).message });
+    }
   });
 
   return app;

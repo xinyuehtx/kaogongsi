@@ -41,6 +41,12 @@ importers:
       '@tengxiaohtx/l6-report':
         specifier: workspace:*
         version: link:../../packages/l6-report
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../packages/plugin-core
+      '@tengxiaohtx/plugin-example':
+        specifier: workspace:*
+        version: link:../../packages/plugin-example
       '@tengxiaohtx/report-llm':
         specifier: workspace:*
         version: link:../../packages/report-llm

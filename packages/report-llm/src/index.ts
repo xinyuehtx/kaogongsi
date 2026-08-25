@@ -3,8 +3,10 @@ import type {
   ComparisonView,
   Gate,
   GenerateComparisonInput,
+  LlmProvider,
   MetricDelta,
   ReportGenerator,
+  SkillTemplate,
 } from '@tengxiaohtx/contracts';
 import { summarizeComparison } from '@tengxiaohtx/l6-compare';
 
@@ -151,6 +153,42 @@ export class OpenAiCompatibleReportGenerator implements ReportGenerator {
       verdict: (parsed.verdict as Gate) ?? deriveVerdict(input.view),
       generatedBy: 'llm',
       model: this.opts.model,
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 基于 LlmProvider（插件，RFC-007）的生成器：可套用 Skill 模板指导生成。
+// ─────────────────────────────────────────────────────────────
+function fillTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => vars[k] ?? '');
+}
+
+export class LlmProviderReportGenerator implements ReportGenerator {
+  readonly id: string;
+  constructor(private readonly provider: LlmProvider, private readonly skill?: SkillTemplate) {
+    this.id = `provider:${provider.id}`;
+  }
+  async generate(input: GenerateComparisonInput): Promise<ComparativeNarrative> {
+    const { view } = input;
+    const vars = { project: view.project.name, baseline: view.baseline.label, candidate: view.candidate.label, role: '考功司报告官' };
+    const system = this.skill?.system ? fillTemplate(this.skill.system, vars) : SYSTEM_PROMPT;
+    const guide = this.skill ? `${fillTemplate(this.skill.template, vars)}\n\n` : '';
+    const raw = await this.provider.generateText({ system, prompt: `${guide}${buildUserPrompt(view)}`, temperature: 0, json: true });
+    let parsed: Partial<ComparativeNarrative> = {};
+    try {
+      parsed = JSON.parse(raw) as Partial<ComparativeNarrative>;
+    } catch {
+      parsed = { summary: raw.slice(0, 300) };
+    }
+    return {
+      summary: parsed.summary ?? '',
+      highlights: parsed.highlights ?? [],
+      regressions: parsed.regressions ?? [],
+      recommendation: parsed.recommendation ?? '',
+      verdict: (parsed.verdict as Gate) ?? deriveVerdict(view),
+      generatedBy: 'llm',
+      model: this.provider.model,
     };
   }
 }

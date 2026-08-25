@@ -131,6 +131,40 @@ describe('api: 报告（六层管道）+ 角色过滤', () => {
   });
 });
 
+describe('api: 插件系统（RFC-007）', () => {
+  it('GET /api/plugins 列出示例插件（含 UI DSL 表单）', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const plugins = (await app.inject({ method: 'GET', url: '/api/plugins', headers: auth(token) })).json() as { id: string; forms: unknown[] }[];
+    const example = plugins.find((p) => p.id === 'example');
+    expect(example).toBeDefined();
+    expect(example?.forms.length).toBeGreaterThan(0);
+  });
+
+  it('管理员按 UI DSL 存储用户输入，读回一致；非管理员不可写', async () => {
+    const app = freshServer();
+    const adminToken = await registerAndToken(app);
+    const save = await app.inject({ method: 'POST', url: '/api/plugins/data/finance_config/default', headers: auth(adminToken), payload: { endpoint: 'https://fin', apiKey: 'sk', currency: 'CNY' } });
+    expect(save.statusCode).toBe(200);
+    const loaded = (await app.inject({ method: 'GET', url: '/api/plugins/data/finance_config/default', headers: auth(adminToken) })).json() as { data: { endpoint: string } };
+    expect(loaded.data.endpoint).toBe('https://fin');
+
+    // bi 用户不可写配置
+    await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
+    const biToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } })).json() as { token: string }).token;
+    const denied = await app.inject({ method: 'POST', url: '/api/plugins/data/finance_config/default', headers: auth(biToken), payload: { endpoint: 'x' } });
+    expect(denied.statusCode).toBe(403);
+  });
+
+  it('外部数据（财务）经插件并入报告财务分区', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const view = (await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) })).json() as ReportView;
+    const financial = view.sections.find((s) => s.title === '财务')?.data as { key: string }[];
+    expect(financial.some((k) => k.key === 'gross_margin')).toBe(true); // 来自 example 插件外部数据
+  });
+});
+
 describe('api: 轨迹接入连接器（RFC-006，端到端）', () => {
   function claudeRun(version: string, verdict: 'pass' | 'fail'): unknown {
     return [

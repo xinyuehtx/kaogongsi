@@ -19,6 +19,8 @@
     "@tengxiaohtx/l3-metrics": "workspace:*",
     "@tengxiaohtx/l6-report": "workspace:*",
     "@tengxiaohtx/l6-compare": "workspace:*",
+    "@tengxiaohtx/plugin-core": "workspace:*",
+    "@tengxiaohtx/plugin-example": "workspace:*",
     "@tengxiaohtx/report-llm": "workspace:*",
     "fastify": "^5.2.0"
   },

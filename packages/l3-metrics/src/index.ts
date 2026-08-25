@@ -129,13 +129,18 @@ function placeKpi(kpis: KpiSet, def: MetricDef, k: Kpi): void {
  * 从某版本的原始信号计算完整评测结果（KpiSet + bundles）。
  * @param version 版本摘要
  * @param signals 归一化信号（契约⓪）
+ * @param catalog 指标目录（默认内置；插件系统可传入合并后的目录，RFC-007）
  */
-export function computeEvaluation(version: VersionSummary, signals: CanonicalSignal[]): VersionEvaluation {
+export function computeEvaluation(
+  version: VersionSummary,
+  signals: CanonicalSignal[],
+  catalog: MetricDef[] = METRIC_CATALOG,
+): VersionEvaluation {
   const graph = buildProvenance(signals);
   const kpis = emptyKpiSet();
   const bundles: MetricCaseBundle[] = [];
 
-  for (const def of METRIC_CATALOG) {
+  for (const def of catalog) {
     const cases = graph.casesForMetric(def.key);
     if (cases.length === 0) continue; // 该来源未提供此指标
     const observations = cases.map((c) => c.observation);
