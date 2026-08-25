@@ -363,6 +363,36 @@ export interface ReportGenerator {
 }
 
 // ─────────────────────────────────────────────────────────────
+// LLM Provider 端口（RFC-007，插件系统 L2 能力）——被 report-llm / skill 消费。
+// 由插件提供实现（如 Vercel AI SDK）；默认离线 Mock。
+// ─────────────────────────────────────────────────────────────
+export interface LlmGenerateOptions {
+  prompt: string;
+  system?: string;
+  temperature?: number;
+  json?: boolean; // 要求返回 JSON
+}
+
+export interface LlmProvider {
+  id: string;
+  model?: string;
+  generateText(opts: LlmGenerateOptions): Promise<string>;
+}
+
+/**
+ * Skill 模板（RFC-007，L4-L6 LLM 生成指导）：用占位符 {{key}} 描述提示词模板，
+ * 由插件提供，供报告/诊断/决策生成时套用。
+ */
+export interface SkillTemplate {
+  id: string;
+  label: string;
+  scope: 'compare' | 'decision' | 'diagnosis' | (string & {});
+  system?: string;
+  template: string; // 含 {{var}} 占位符
+  inputs?: string[]; // 需要的变量名
+}
+
+// ─────────────────────────────────────────────────────────────
 // 连接器标准接口（RFC-001 §3.1）—— D9.2 读侧落地
 // 视图只依赖此接口，不关心数据来自 mock / BI / Langfuse / L5。
 // ─────────────────────────────────────────────────────────────
