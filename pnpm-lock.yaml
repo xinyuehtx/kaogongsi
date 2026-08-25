@@ -163,6 +163,9 @@ importers:
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
+      '@tengxiaohtx/l3-metrics':
+        specifier: workspace:*
+        version: link:../l3-metrics
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1
