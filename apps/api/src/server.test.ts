@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ComparisonView, DataConnector, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
 import { InMemoryStorage } from '@tengxiaohtx/auth-core';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
+import { FileSource, createIngestConnector } from '@tengxiaohtx/ingest';
 import { buildServer } from './server.js';
 
 /** 每个测试用独立 storage，避免"首用户=admin"跨测试串味。 */
@@ -124,5 +128,40 @@ describe('api: 报告（六层管道）+ 角色过滤', () => {
     const token = await registerAndToken(app);
     const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
     expect((res.json() as ReportView).audience).toBe('exec');
+  });
+});
+
+describe('api: 轨迹接入连接器（RFC-006，端到端）', () => {
+  function claudeRun(version: string, verdict: 'pass' | 'fail'): unknown {
+    return [
+      { type: 'user', sessionId: 's', cwd: '/work/dt-sheet', gitBranch: version, message: { role: 'user', content: 'x' } },
+      { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'bash', input: {} }] } },
+      { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', name: 'bash', content: 'ok', is_error: false }] } },
+      { type: 'result', verdict, costUsd: 0.02, usage: { total_tokens: 900 } },
+    ];
+  }
+
+  it('注入 IngestConnector：文件夹轨迹 → /api/projects + /api/report/version 六层管道', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'api-ingest-'));
+    try {
+      mkdirSync(join(dir, 'dt-sheet'), { recursive: true });
+      writeFileSync(join(dir, 'dt-sheet', 'r1.json'), JSON.stringify(claudeRun('v2.0', 'pass')));
+      writeFileSync(join(dir, 'dt-sheet', 'r2.json'), JSON.stringify(claudeRun('v2.0', 'fail')));
+      const connector = await createIngestConnector({ source: new FileSource(dir) });
+      const app = freshServer({ connector });
+      const token = await registerAndToken(app);
+
+      const projects = (await app.inject({ method: 'GET', url: '/api/projects', headers: auth(token) })).json() as ProjectSummary[];
+      expect(projects.map((p) => p.id)).toContain('dt-sheet');
+
+      const view = (await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) })).json() as ReportView;
+      expect(view.audience).toBe('exec');
+      const quality = view.sections.find((s) => s.title === '质量');
+      expect(quality).toBeDefined();
+      const kpis = quality?.data as { key: string; value: number }[];
+      expect(kpis.find((k) => k.key === 'success_rate')?.value).toBe(50); // 1 pass / 2
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

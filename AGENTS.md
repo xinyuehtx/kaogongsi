@@ -21,7 +21,7 @@
 | L4 归因 | `packages/l4-attribution` | MetricCaseBundle |
 | L3 计算 | `packages/l3-metrics`（bootstrap CI / pass^k / Cost-of-Pass） | Provenance 查询 |
 | L2 证据/血缘 | `packages/l2-provenance`（Source→Case→Metric 图） | CanonicalSignal |
-| L1 接入/适配 | `packages/connector-mock`（只吐 CanonicalSignal；+ 未来 BI/Langfuse/L5 连接器） | — |
+| L1 接入/适配 | `packages/connector-mock`（内置 fixture）· `packages/ingest`（真实轨迹：File/HTTP 源 + 解析器插件） | — |
 | 契约（贯穿） | `packages/contracts`（含指标目录 METRIC_CATALOG） | 五道缝的类型定义 |
 | 横切 · 认证 | `packages/auth-core`（账号/角色/授权 + StoragePort + JWT/scrypt + RBAC） | StoragePort（内存/文件，可换 Postgres） |
 

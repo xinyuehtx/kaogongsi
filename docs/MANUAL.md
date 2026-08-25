@@ -22,6 +22,25 @@ docker compose down           # 停；docker compose down -v 连数据卷一起�
 > 账号系统：角色 **管理员 / 技术 / 财务 / BI**。管理员在「管理台」建用户、改角色、按项目勾选授权；
 > 角色决定可见报告分区，项目授权决定可见项目（RFC-005）。
 
+### 接入真实轨迹（RFC-006，可选）
+
+默认用内置 Mock 数据。要接真实 Agent/观测平台轨迹，配 env（连接器隔离，L2–L6 零改动）：
+
+```bash
+# 本地文件夹（递归收集 .json/.jsonl；文件夹名作 tag）
+KAOGONGSI_INGEST=file:/trajectories
+# 或 HTTP 拉取（分批 + 时间范围 + tag + 自定义 header）
+KAOGONGSI_INGEST=https://obs.example/api/traces
+KAOGONGSI_INGEST_HEADERS='{"authorization":"Bearer xxx"}'
+KAOGONGSI_INGEST_FROM=2026-08-01  KAOGONGSI_INGEST_TO=2026-08-31  KAOGONGSI_INGEST_TAGS=prod
+# 选配解析器插件（空=全部）：claude-code/codex/deepseek/opencode/qoder/trae/traework/
+#   qwenwork/workbuddy/langfuse/langsmith/harbor
+KAOGONGSI_PARSERS=claude-code,langfuse
+```
+
+docker-compose：放开 `./trajectories:/trajectories:ro` 卷 + `KAOGONGSI_INGEST=file:/trajectories`。
+只映射轨迹能给出的指标（成功率/成本/步数/工具成功率/护栏命中），给不出的（留存/ROI 等）留空。
+
 ## 1. 环境
 
 - Node ≥ 22（开发用 24）、pnpm 10。

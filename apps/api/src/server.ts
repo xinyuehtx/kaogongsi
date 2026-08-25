@@ -4,6 +4,7 @@ import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
 import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
 import { buildComparison } from '@tengxiaohtx/l6-compare';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
+import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
 import { createReportGenerator } from '@tengxiaohtx/report-llm';
 import {
   FileStorage,
@@ -203,14 +204,41 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   return app;
 }
 
+/**
+ * 按部署环境构建轨迹接入连接器（RFC-006）。未配置 KAOGONGSI_INGEST 则返回 undefined（用默认 Mock）。
+ *  - KAOGONGSI_INGEST=file:/path | http(s)://host/api/traces
+ *  - KAOGONGSI_PARSERS=claude-code,langfuse,…（选配解析器插件；空=全部）
+ *  - KAOGONGSI_INGEST_HEADERS（JSON，http 自定义 header）/ _TAGS / _FROM / _TO / _FORMAT
+ */
+export async function resolveIngestConnector(): Promise<DataConnector | undefined> {
+  const spec = process.env.KAOGONGSI_INGEST;
+  if (!spec) return undefined;
+  const parsers = process.env.KAOGONGSI_PARSERS?.split(',').map((s) => s.trim()).filter(Boolean);
+  const registry = createRegistry(parsers);
+  const query = {
+    timeFrom: process.env.KAOGONGSI_INGEST_FROM,
+    timeTo: process.env.KAOGONGSI_INGEST_TO,
+    tags: process.env.KAOGONGSI_INGEST_TAGS?.split(',').map((s) => s.trim()).filter(Boolean),
+  };
+  const format = process.env.KAOGONGSI_INGEST_FORMAT;
+  let source;
+  if (/^https?:/.test(spec)) {
+    const headers = process.env.KAOGONGSI_INGEST_HEADERS ? (JSON.parse(process.env.KAOGONGSI_INGEST_HEADERS) as Record<string, string>) : undefined;
+    source = new HttpSource(spec, { headers });
+  } else {
+    source = new FileSource(spec.startsWith('file:') ? spec.slice('file:'.length) : spec);
+  }
+  return createIngestConnector({ source, registry, query, format });
+}
+
 // 仅在直接运行时监听（被测试 import 时不监听）
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
-  const app = buildServer();
   const port = Number(process.env.PORT ?? 3001);
-  app
-    .listen({ port, host: '0.0.0.0' })
-    .then(() => console.log(`api listening on :${port}`))
+  resolveIngestConnector()
+    .then((connector) => buildServer(connector ? { connector } : {}))
+    .then((app) => app.listen({ port, host: '0.0.0.0' }))
+    .then(() => console.log(`api listening on :${port}${process.env.KAOGONGSI_INGEST ? ` (ingest: ${process.env.KAOGONGSI_INGEST})` : ''}`))
     .catch((err) => {
       console.error(err);
       process.exit(1);

@@ -29,6 +29,9 @@ importers:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@tengxiaohtx/ingest':
+        specifier: workspace:*
+        version: link:../../packages/ingest
       '@tengxiaohtx/l3-metrics':
         specifier: workspace:*
         version: link:../../packages/l3-metrics

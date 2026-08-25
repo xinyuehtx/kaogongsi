@@ -15,8 +15,18 @@ services:
       KAOGONGSI_LLM_BASE_URL: ${KAOGONGSI_LLM_BASE_URL:-}
       KAOGONGSI_LLM_API_KEY: ${KAOGONGSI_LLM_API_KEY:-}
       KAOGONGSI_LLM_MODEL: ${KAOGONGSI_LLM_MODEL:-}
+      # 可选：轨迹接入（RFC-006）。留空=用内置 Mock 数据。
+      #   file:/trajectories 遍历挂载卷；或 http(s)://host/api/traces 拉取
+      KAOGONGSI_INGEST: ${KAOGONGSI_INGEST:-}
+      KAOGONGSI_PARSERS: ${KAOGONGSI_PARSERS:-}
+      KAOGONGSI_INGEST_HEADERS: ${KAOGONGSI_INGEST_HEADERS:-}
+      KAOGONGSI_INGEST_TAGS: ${KAOGONGSI_INGEST_TAGS:-}
+      KAOGONGSI_INGEST_FROM: ${KAOGONGSI_INGEST_FROM:-}
+      KAOGONGSI_INGEST_TO: ${KAOGONGSI_INGEST_TO:-}
     volumes:
       - kg-data:/data
+      # 放开以从本地文件夹接入轨迹（配合 KAOGONGSI_INGEST=file:/trajectories）：
+      # - ./trajectories:/trajectories:ro
     ports:
       - '3001:3001' # 便于直接调试 api（web 已经 /api 反代，不依赖此端口）
     restart: unless-stopped

@@ -19,11 +19,12 @@ L3 计算        packages/l3-metrics（bootstrap CI / pass^k / Cost-of-Pass）
       ▲ 契约① Provenance 查询
 L2 证据/血缘   packages/l2-provenance（Source→Case→Metric 图 + 投影下钻）
       ▲ 契约⓪ CanonicalSignal / VersionSignals
-L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 BI/Langfuse/L5 连接器
+L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest（真实轨迹：文件/HTTP + 解析器插件）
 ```
 
 > **六层贯通**：`fetchSignals(L1)` → `buildProvenance(L2)` → `computeEvaluation(L3)` → `buildAttribution(L4)` → `decide(L5)` → `buildExecReportView/buildComparison(L6)`。
 > 指标目录 `METRIC_CATALOG`（contracts）是各层共享的指标词汇。
+> **L1 真实接入**（RFC-006）：`ingest` 提供 File/HTTP 源 + 12 种轨迹解析器插件（claude-code/codex/…/langfuse/langsmith/harbor），部署容器按 `KAOGONGSI_PARSERS` 选配；`IngestConnector` 与 `MockConnector` 同实现 `DataConnector`，上层零改动。
 
 ## 2. 已实现（截至需求 004：六层贯通）
 
@@ -31,6 +32,7 @@ L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 B
 |---|---|---|
 | `@tengxiaohtx/contracts` | 五道契约缝 + KPI 目录 + 指标目录 METRIC_CATALOG + 项目/版本 + 信号/血缘/对比 + `DataConnector`/`ReportGenerator` 端口 | ✅ |
 | `@tengxiaohtx/connector-mock` | `MockConnector`（多项目/多版本；只吐 CanonicalSignal 信号）+ 可复用连接器契约测试 | ✅ |
+| `@tengxiaohtx/ingest` | 真实轨迹接入：File/HTTP 源（分批/时间/tag/header）+ 12 种解析器插件 + IngestConnector（RFC-006） | ✅ |
 | `@tengxiaohtx/l2-provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
 | `@tengxiaohtx/l3-metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
 | `@tengxiaohtx/l4-attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
@@ -78,3 +80,4 @@ L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 B
 | 003 归因引擎 + 决策引擎（做实 L4/L5） | `docs/rfcs/RFC-003-attribution-decision-engines.md` | `docs/stories/US-003-attribution-decision-engines.md` | ✅ 完成 |
 | 004 贯通 L1→L3（信号/血缘/可信指标） | `docs/rfcs/RFC-004-ingest-provenance-metrics.md` | `docs/stories/US-004-ingest-provenance-metrics.md` | ✅ 完成 |
 | 005 企业化（账号/角色/授权 + 全栈 + Pages） | `docs/rfcs/RFC-005-enterprise-auth-stack-pages.md` | `docs/stories/US-005-enterprise-auth-stack-pages.md` | ✅ 完成 |
+| 006 数据接入（本地文件/HTTP + 解析器插件） | `docs/rfcs/RFC-006-data-ingestion-parsers.md` | `docs/stories/US-006-data-ingestion-parsers.md` | ✅ 完成 |
