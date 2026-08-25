@@ -1,0 +1,24 @@
+{
+  "name": "@tengxiaohtx/plugin-aisdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'lint: plugin-aisdk (placeholder)'"
+  },
+  "dependencies": {
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/plugin-core": "workspace:*",
+    "ai": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
