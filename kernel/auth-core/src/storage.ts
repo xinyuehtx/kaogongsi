@@ -3,20 +3,20 @@ import { dirname, join } from 'node:path';
 import type { ProjectGrant, Role, User } from './types.js';
 
 /**
- * 存储端口（D3 端口化）：账号/授权持久化的抽象。
- * 内置内存实现（测试/默认）与 JSON 文件实现（docker 自包含持久化）；
- * 生产可换 Postgres/Prisma 适配器，上层零改动。
+ * 存储端口（D3 端口化 + 防腐层）：账号/授权持久化的抽象，**异步**以支持 DB。
+ * 内置内存/文件实现（测试/自包含）；DB 适配器（Postgres/Prisma）在 kernel/persistence，
+ * 与领域隔离——领域只依赖本端口，不依赖具体存储（防腐）。
  */
 export interface StoragePort {
-  listUsers(): User[];
-  getUserById(id: string): User | undefined;
-  getUserByEmail(email: string): User | undefined;
-  createUser(user: User): void;
-  updateUserRole(id: string, role: Role): void;
-  listGrantsByUser(userId: string): ProjectGrant[];
-  listAllGrants(): ProjectGrant[];
-  addGrant(grant: ProjectGrant): void;
-  removeGrant(userId: string, projectId: string): void;
+  listUsers(): Promise<User[]>;
+  getUserById(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: User): Promise<void>;
+  updateUserRole(id: string, role: Role): Promise<void>;
+  listGrantsByUser(userId: string): Promise<ProjectGrant[]>;
+  listAllGrants(): Promise<ProjectGrant[]>;
+  addGrant(grant: ProjectGrant): Promise<void>;
+  removeGrant(userId: string, projectId: string): Promise<void>;
 }
 
 interface DataShape {
@@ -29,40 +29,40 @@ export class InMemoryStorage implements StoragePort {
   protected users: User[] = [];
   protected grants: ProjectGrant[] = [];
 
-  listUsers(): User[] {
+  async listUsers(): Promise<User[]> {
     return [...this.users];
   }
-  getUserById(id: string): User | undefined {
+  async getUserById(id: string): Promise<User | undefined> {
     return this.users.find((u) => u.id === id);
   }
-  getUserByEmail(email: string): User | undefined {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     const e = email.toLowerCase();
     return this.users.find((u) => u.email.toLowerCase() === e);
   }
-  createUser(user: User): void {
+  async createUser(user: User): Promise<void> {
     this.users.push(user);
     this.persist();
   }
-  updateUserRole(id: string, role: Role): void {
+  async updateUserRole(id: string, role: Role): Promise<void> {
     const u = this.users.find((x) => x.id === id);
     if (u) {
       u.role = role;
       this.persist();
     }
   }
-  listGrantsByUser(userId: string): ProjectGrant[] {
+  async listGrantsByUser(userId: string): Promise<ProjectGrant[]> {
     return this.grants.filter((g) => g.userId === userId);
   }
-  listAllGrants(): ProjectGrant[] {
+  async listAllGrants(): Promise<ProjectGrant[]> {
     return [...this.grants];
   }
-  addGrant(grant: ProjectGrant): void {
+  async addGrant(grant: ProjectGrant): Promise<void> {
     if (!this.grants.some((g) => g.userId === grant.userId && g.projectId === grant.projectId)) {
       this.grants.push(grant);
       this.persist();
     }
   }
-  removeGrant(userId: string, projectId: string): void {
+  async removeGrant(userId: string, projectId: string): Promise<void> {
     this.grants = this.grants.filter((g) => !(g.userId === userId && g.projectId === projectId));
     this.persist();
   }

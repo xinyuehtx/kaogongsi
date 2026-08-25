@@ -73,12 +73,12 @@ export interface RunMeta {
 }
 
 export interface RunStore {
-  putConnectorVersion(rec: ConnectorVersionRecord): void;
-  listConnectorVersions(connectorId?: string): ConnectorVersionRecord[];
-  startRun(meta: RunMeta): void;
-  putLayer(rec: RunLayerRecord): void;
-  getRun(runId: string): { meta?: RunMeta; layers: RunLayerRecord[] };
-  listRuns(filter?: { projectId?: string }): RunMeta[];
+  putConnectorVersion(rec: ConnectorVersionRecord): Promise<void>;
+  listConnectorVersions(connectorId?: string): Promise<ConnectorVersionRecord[]>;
+  startRun(meta: RunMeta): Promise<void>;
+  putLayer(rec: RunLayerRecord): Promise<void>;
+  getRun(runId: string): Promise<{ meta?: RunMeta; layers: RunLayerRecord[] }>;
+  listRuns(filter?: { projectId?: string }): Promise<RunMeta[]>;
 }
 
 export class InMemoryRunStore implements RunStore {
@@ -86,29 +86,29 @@ export class InMemoryRunStore implements RunStore {
   protected runMetas: RunMeta[] = [];
   protected layers: RunLayerRecord[] = [];
 
-  putConnectorVersion(rec: ConnectorVersionRecord): void {
+  async putConnectorVersion(rec: ConnectorVersionRecord): Promise<void> {
     const dup = this.connectorVersions.some((v) => v.connectorId === rec.connectorId && v.packageVersion === rec.packageVersion && v.configVersion === rec.configVersion);
     if (!dup) this.connectorVersions.push(rec);
     this.persist();
   }
-  listConnectorVersions(connectorId?: string): ConnectorVersionRecord[] {
+  async listConnectorVersions(connectorId?: string): Promise<ConnectorVersionRecord[]> {
     return this.connectorVersions.filter((v) => !connectorId || v.connectorId === connectorId);
   }
-  startRun(meta: RunMeta): void {
+  async startRun(meta: RunMeta): Promise<void> {
     this.runMetas.push(meta);
     this.persist();
   }
-  putLayer(rec: RunLayerRecord): void {
+  async putLayer(rec: RunLayerRecord): Promise<void> {
     this.layers.push(rec);
     this.persist();
   }
-  getRun(runId: string): { meta?: RunMeta; layers: RunLayerRecord[] } {
+  async getRun(runId: string): Promise<{ meta?: RunMeta; layers: RunLayerRecord[] }> {
     return {
       meta: this.runMetas.find((m) => m.runId === runId),
       layers: this.layers.filter((l) => l.runId === runId).sort((a, b) => a.seq - b.seq),
     };
   }
-  listRuns(filter?: { projectId?: string }): RunMeta[] {
+  async listRuns(filter?: { projectId?: string }): Promise<RunMeta[]> {
     return this.runMetas.filter((m) => !filter?.projectId || m.projectId === filter.projectId);
   }
   protected persist(): void {

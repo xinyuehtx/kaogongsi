@@ -39,34 +39,34 @@ describe('auth-core: 密码与 JWT', () => {
 });
 
 describe('auth-core: 注册/登录', () => {
-  it('首个用户为 admin，其后公开注册为 bi；管理员可指定角色', () => {
+  it('首个用户为 admin，其后公开注册为 bi；管理员可指定角色', async () => {
     const s = new InMemoryStorage();
-    expect(registerUser(s, { email: 'boss@x.com', password: 'p1' }).role).toBe('admin');
-    expect(registerUser(s, { email: 'joe@x.com', password: 'p2' }).role).toBe('bi');
-    expect(registerUser(s, { email: 'fin@x.com', password: 'p3' }, { byAdmin: true, role: 'finance' }).role).toBe('finance');
+    expect((await registerUser(s, { email: 'boss@x.com', password: 'p1' })).role).toBe('admin');
+    expect((await registerUser(s, { email: 'joe@x.com', password: 'p2' })).role).toBe('bi');
+    expect((await registerUser(s, { email: 'fin@x.com', password: 'p3' }, { byAdmin: true, role: 'finance' })).role).toBe('finance');
   });
 
-  it('重复邮箱报错；登录校验口令并签发令牌', () => {
+  it('重复邮箱报错；登录校验口令并签发令牌', async () => {
     const s = new InMemoryStorage();
-    registerUser(s, { email: 'a@x.com', password: 'pw' });
-    expect(() => registerUser(s, { email: 'a@x.com', password: 'pw' })).toThrow(AuthError);
-    const { token, user } = login(s, 'a@x.com', 'pw', SECRET);
+    await registerUser(s, { email: 'a@x.com', password: 'pw' });
+    await expect(registerUser(s, { email: 'a@x.com', password: 'pw' })).rejects.toThrow(AuthError);
+    const { token, user } = await login(s, 'a@x.com', 'pw', SECRET);
     expect(user.email).toBe('a@x.com');
-    expect(authenticate(s, token, SECRET)?.id).toBe(user.id);
-    expect(() => login(s, 'a@x.com', 'bad', SECRET)).toThrow(AuthError);
+    expect((await authenticate(s, token, SECRET))?.id).toBe(user.id);
+    await expect(login(s, 'a@x.com', 'bad', SECRET)).rejects.toThrow(AuthError);
   });
 });
 
 describe('auth-core: FileStorage 持久化', () => {
-  it('落盘后新实例可读回用户与授权', () => {
+  it('落盘后新实例可读回用户与授权', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'authcore-'));
     try {
       const s1 = new FileStorage(dir);
-      const u = registerUser(s1, { email: 'p@x.com', password: 'pw' });
-      s1.addGrant({ userId: u.id, projectId: 'dt-sheet' });
+      const u = await registerUser(s1, { email: 'p@x.com', password: 'pw' });
+      await s1.addGrant({ userId: u.id, projectId: 'dt-sheet' });
       const s2 = new FileStorage(dir);
-      expect(s2.getUserByEmail('p@x.com')?.id).toBe(u.id);
-      expect(s2.listGrantsByUser(u.id).map((g) => g.projectId)).toEqual(['dt-sheet']);
+      expect((await s2.getUserByEmail('p@x.com'))?.id).toBe(u.id);
+      expect((await s2.listGrantsByUser(u.id)).map((g) => g.projectId)).toEqual(['dt-sheet']);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 账号/授权（auth-core StoragePort）
+model User {
+  id           String  @id
+  email        String  @unique
+  displayName  String
+  role         String
+  passwordHash String
+  salt         String
+  createdAt    String
+  grants       Grant[]
+}
+
+model Grant {
+  userId    String
+  projectId String
+  user      User   @relation(fields: [userId], references: [id])
+
+  @@id([userId, projectId])
+}
+
+// 插件用户输入文档（plugin-core DocumentStore）
+model PluginDoc {
+  collection String
+  key        String
+  json       String
+  updatedAt  String
+
+  @@id([collection, key])
+}
+
+// 连接器版本（两种版本都记录）
+model ConnectorVersionRow {
+  id             String  @id @default(uuid())
+  connectorId    String
+  packageVersion String?
+  configVersion  String?
+  at             String
+  meta           String?
+}
+
+// 运行元信息 + 每层入参（除 L1）
+model RunMetaRow {
+  runId          String  @id
+  at             String
+  connectorId    String
+  packageVersion String?
+  configVersion  String?
+  projectId      String
+  versionId      String
+  actor          String?
+}
+
+model RunLayerRow {
+  id      String @id @default(uuid())
+  runId   String
+  seq     Int
+  layer   String
+  stageId String
+  input   String
+  at      String
+
+  @@index([runId])
+}
