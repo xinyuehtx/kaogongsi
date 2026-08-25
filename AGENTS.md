@@ -60,6 +60,9 @@ kernel/ ← middleware/ ← connectors/ ← example/     （箭头 = 依赖方�
 - **D11/A1 诊断非打分**：轨迹级 5 类（效率/决策/规划/交互/稳定）只做**诊断**，不作 pass/fail 门禁；`Right Tool Rate` 额外标「信号非门禁」。
 - **D8.2 人工拍板**：框架给「推荐+依据+敏感性+反对证据」，**不自动执行不可逆决策**（不自动 kill/放量）。
 - **归因铁律**：三方 `share` 之和 = 1，每项必有 `supportingCases`（无案例即非法）。
+- **RFC-011 依赖方向**：`kernel ← middleware ← connectors ← example`，**内核不得依赖上层**。
+  由 `pnpm lint:arch`（`scripts/check-architecture.mjs`）在 CI 硬拦：同时校验 package.json 声明与源码 import。
+  要加装配/具体实现，放 `example/`；内核只声明端口。
 
 ## 3. 加需求的流程（BDD + TDD，逐层先红后绿）
 
@@ -84,8 +87,8 @@ pnpm --filter @tengxiaohtx/example-app dev    # 后端（组装层）:3001
 pnpm --filter @tengxiaohtx/example-web dev    # 前端（应用层）:5173
 pnpm stack:up                                 # example 一键全栈（PG+Redis+app+web）
 
-# 依赖规则自检：kernel 只应依赖 kernel 内部包
-grep -h '"@tengxiaohtx/' kernel/*/package.json | grep -oE '@tengxiaohtx/[a-z-]+' | sort -u
+pnpm lint:arch                                # 架构依赖门禁（CI 同款，违规退出 1）
+pnpm verify                                   # lint:arch + typecheck + test + build
 ```
 
 首次装 E2E 浏览器：`pnpm --filter @tengxiaohtx/e2e exec playwright install chromium`。

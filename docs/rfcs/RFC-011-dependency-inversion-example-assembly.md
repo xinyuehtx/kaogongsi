@@ -90,4 +90,7 @@ example/.env.example
 - `kernel/web` 现为库（`build` 即 typecheck，无 dist 产物）——turbo 会提示该任务无 outputs，属预期。
 
 ## 7. 后续
-- 用 lint 规则（如 dependency-cruiser）把依赖方向固化为 CI 门禁；example 增更多装配样例（不同层切片/不同连接器组合）。
+
+- ✅ **已落地**：依赖方向已固化为门禁 `scripts/check-architecture.mjs`（零依赖，校验 package.json 声明 + 源码 import），
+  接入 `pnpm lint:arch` / `pnpm verify` 与 `.github/workflows/ci.yml`；已用注入违规验证其确实会失败（exit 1）。
+- 待做：example 增更多装配样例（不同层切片 / 不同连接器组合）；把 e2e 也纳入 PR 必过门禁的时长优化。

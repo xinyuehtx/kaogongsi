@@ -11,9 +11,11 @@
     "build": "turbo run build --filter=!@tengxiaohtx/e2e",
     "test": "turbo run test --filter=!@tengxiaohtx/e2e",
     "lint": "turbo run lint",
+    "lint:arch": "node scripts/check-architecture.mjs",
     "typecheck": "turbo run typecheck --filter=!@tengxiaohtx/e2e",
     "dev": "turbo run dev --filter=!@tengxiaohtx/e2e",
     "e2e": "pnpm --filter @tengxiaohtx/e2e test",
+    "verify": "pnpm lint:arch && pnpm typecheck && pnpm test && pnpm build",
     "stack:up": "docker compose -f example/docker-compose.yml up --build",
     "stack:down": "docker compose -f example/docker-compose.yml down",
     "stack:clean": "docker compose -f example/docker-compose.yml down -v"

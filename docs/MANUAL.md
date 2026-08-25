@@ -55,6 +55,8 @@ pnpm test             # 全部单测（turbo，排除 e2e）
 pnpm typecheck        # 全部类型检查
 pnpm build            # 全部构建
 pnpm e2e              # Playwright 端到端
+pnpm lint:arch        # 架构依赖门禁（kernel ← middleware ← connectors ← example）
+pnpm verify           # 门禁 + typecheck + test + build（CI 同款）
 
 # 单层独立测试（验证隔离）
 pnpm --filter @tengxiaohtx/contracts test

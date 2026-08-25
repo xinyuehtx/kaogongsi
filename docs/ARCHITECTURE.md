@@ -35,6 +35,7 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **门禁**：`pnpm lint:arch`（`scripts/check-architecture.mjs`）在 CI 校验上述方向——同时检查 package.json 声明与源码 import，违规即失败。
 > **两个正交方向**：**依赖**向下（编译期，上表箭头）；**数据流/管道组装**自下而上 L1→L6（RFC-008）。
 > 内核只声明端口（`ProjectDirectory / ReportService / PluginDirectory`），example 用 middleware + connectors 实现并注入。
 
@@ -114,6 +115,7 @@ L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真
 
 ## 5. 隔离性验证方式（每层"可独立存活"如何被守住）
 
+- **架构依赖门禁**：`pnpm lint:arch` 校验 `kernel ← middleware ← connectors ← example`（CI 必过；已验证能拦住注入的违规）。
 - 每包独立 `pnpm --filter <pkg> test` 可绿，互不依赖运行时。
 - 连接器契约测试 = 可替换的守卫。
 - api 注入假连接器、e2e 切 `?connector=` = 端到端换源零改动的守卫。

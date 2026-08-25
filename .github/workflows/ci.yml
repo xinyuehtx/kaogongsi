@@ -1,0 +1,61 @@
+name: CI
+
+# 门禁：架构依赖方向（RFC-011）→ 类型 → 单测 → 构建 → E2E。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # 架构红线：kernel ← middleware ← connectors ← example（不可倒灌）
+      - name: Architecture dependency guard
+        run: pnpm lint:arch
+
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright browser
+        run: pnpm --filter @tengxiaohtx/e2e exec playwright install --with-deps chromium
+      - name: E2E (example/web)
+        run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
