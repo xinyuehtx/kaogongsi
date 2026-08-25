@@ -1,0 +1,35 @@
+# 考功司 · 本地自包含全栈（一键 docker compose up）
+# 参考 Langfuse 的自托管思路：一条命令拉起后端 + 前端；账号/授权持久化到命名卷。
+# 生产可把 api 的存储端口从 JSON 文件换成 Postgres（见 packages/auth-core StoragePort）。
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      PORT: '3001'
+      KAOGONGSI_DATA_DIR: /data
+      KAOGONGSI_JWT_SECRET: ${KAOGONGSI_JWT_SECRET:-please-change-in-prod}
+      # 可选：接真实 LLM（对比报告）——留空则用离线确定性模板
+      KAOGONGSI_LLM_BASE_URL: ${KAOGONGSI_LLM_BASE_URL:-}
+      KAOGONGSI_LLM_API_KEY: ${KAOGONGSI_LLM_API_KEY:-}
+      KAOGONGSI_LLM_MODEL: ${KAOGONGSI_LLM_MODEL:-}
+    volumes:
+      - kg-data:/data
+    ports:
+      - '3001:3001' # 便于直接调试 api（web 已经 /api 反代，不依赖此端口）
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - '8080:80'
+    restart: unless-stopped
+
+volumes:
+  kg-data:

@@ -1,6 +1,26 @@
 # 使用手册（L2，随迭代更新）
 
-> 考功司使用手册。最后更新：需求 002 完成。
+> 考功司使用手册。最后更新：需求 005 完成（企业化：账号/角色/授权 + 全栈 + Pages）。
+
+## 0. 本地自包含全栈（企业版，一键起）
+
+参考 Langfuse 自托管思路，一条命令拉起「后端 api + 前端 web」，账号/授权持久化到命名卷：
+
+```bash
+docker compose up --build     # 或 pnpm stack:up
+# 打开 http://localhost:8080 —— 首个注册用户自动成为管理员
+docker compose down           # 停；docker compose down -v 连数据卷一起清
+```
+
+- 前端 :8080（nginx 托管静态 + `/api` 反代到 api），后端 :3001。
+- 账号存储：默认 JSON 文件（卷 `kg-data`，`KAOGONGSI_DATA_DIR=/data`）；生产可换 Postgres
+  适配器（`packages/auth-core` 的 `StoragePort`），上层零改动。
+- 环境变量：`KAOGONGSI_JWT_SECRET`（务必改）、可选 `KAOGONGSI_LLM_*`（接真实 LLM，否则离线模板）。
+- 不用 docker 也可跑全栈：`pnpm --filter @tengxiaohtx/api dev`（:3001，tsx 直跑 TS）
+  + `VITE_DATA_MODE=api pnpm --filter @tengxiaohtx/web dev`（:5173）。
+
+> 账号系统：角色 **管理员 / 技术 / 财务 / BI**。管理员在「管理台」建用户、改角色、按项目勾选授权；
+> 角色决定可见报告分区，项目授权决定可见项目（RFC-005）。
 
 ## 1. 环境
 
