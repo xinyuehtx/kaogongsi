@@ -8,16 +8,17 @@
 账号/授权/插件配置/运行溯源入 **Postgres/Prisma**，插件 KV 缓存入 **Redis**（存储防腐层，RFC-010）：
 
 ```bash
-cp .env.example .env          # 改 KAOGONGSI_JWT_SECRET
-docker compose up --build     # 或 pnpm stack:up
+cp example/.env.example example/.env   # 改 KAOGONGSI_JWT_SECRET
+pnpm stack:up                          # = docker compose -f example/docker-compose.yml up --build
 # 打开 http://localhost:8080 —— 首个注册用户自动成为管理员（数据持久在 Postgres）
-docker compose down           # 停；docker compose down -v 连数据卷一起清
+pnpm stack:down                        # 停；pnpm stack:clean 连数据卷一起清
 ```
 
 - 前端 :8080（nginx + `/api` 反代），后端 :3001，Postgres :5432，Redis :6379。
 - api 启动时 `prisma db push` 自动建表；`@prisma/client` 于镜像安装时生成。
 - **防腐层与存储独立**：领域只依赖端口，切库只在 `kernel/persistence` 装配处；未配 `DATABASE_URL/REDIS_URL`（本地 dev）自动回落内存/文件。
-- 不用 docker 也可跑：`pnpm --filter @tengxiaohtx/api dev`（:3001）+ `VITE_DATA_MODE=api pnpm --filter @tengxiaohtx/web dev`（:5173）。
+- 不用 docker 也可跑：`pnpm --filter @tengxiaohtx/example-app dev`（:3001）+ `VITE_DATA_MODE=api pnpm --filter @tengxiaohtx/example-web dev`（:5173）。
+- **组装位置**：后端装配在 `example/app/src/assemble.ts`，前端在 `example/web/src/main.tsx`（内核只声明端口，RFC-011）。
 
 > 账号系统：角色 **管理员 / 技术 / 财务 / BI**。管理员在「管理台」建用户、改角色、按项目勾选授权；
 > 角色决定可见报告分区，项目授权决定可见项目（RFC-005）。
@@ -65,11 +66,12 @@ pnpm --filter @tengxiaohtx/report test
 pnpm --filter @tengxiaohtx/compare test
 pnpm --filter @tengxiaohtx/report-llm test
 pnpm --filter @tengxiaohtx/connector-mock test
-pnpm --filter @tengxiaohtx/api test
+pnpm --filter @tengxiaohtx/api test          # 内核（桩 services，不依赖中间件）
+pnpm --filter @tengxiaohtx/example-app test  # 整机集成（连接器 + 分层管道 + 插件）
 
 # 起服务
-pnpm --filter @tengxiaohtx/api dev     # 后端 :3001
-pnpm --filter @tengxiaohtx/web dev     # 前端 :5173
+pnpm --filter @tengxiaohtx/example-app dev     # 后端（组装层）:3001
+pnpm --filter @tengxiaohtx/example-web dev     # 前端（应用层）:5173
 ```
 
 ## 3. 对上高管 Dashboard（单版本报告）
@@ -105,10 +107,11 @@ export KAOGONGSI_LLM_MODEL=gpt-4o-mini
 
 ## 4. 如何接入一个新数据源（写连接器）
 
-1. 新建包 `packages/connector-xxx`，实现 `DataConnector` 接口（`capabilities/fetchDecision/fetchKpis`）。
+1. 新建包 `connectors/xxx`，实现 `DataConnector` 接口（`capabilities/listProjects/listVersions/fetchSignals`）。
 2. 跑通用契约测试：`runConnectorContract('xxx', () => new XxxConnector())`（从 `@tengxiaohtx/connector-mock` 导入）。
-3. 在 `apps/web/src/connectors.ts` 注册；或在 `apps/api` 注入。
-4. **l6-report 与 web 组件无需改动**——这是连接器模式的目的。
+3. **在组装层注册**：后端 `example/app/src/assemble.ts`（`createApp({ connector })` 或 env）；
+   前端 local 演示态 `example/web/src/connectors.ts`。
+4. **内核与中间件无需改动**——这是连接器模式 + 依赖倒置（RFC-011）的目的。
 
 > metric-only 数据源（如纯 BI 导出）：`capabilities().drillable` 返回 `false`，UI 会自动标"不可下钻、不可作为拍板唯一依据"，不会伪装成完整可信报告（D9.3）。
 

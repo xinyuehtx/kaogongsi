@@ -1,39 +1,71 @@
 # 项目架构文档（L2，随迭代更新）
 
 > 考功司（户部下属评定官员绩效之司→隐喻 Agent 绩效考评）的实现架构。对应总 RFC：`.context/rfc/RFC.md`。
-> 本文档随每个需求迭代更新。最后更新：需求 009 完成（三层架构）。
+> 本文档随每个需求迭代更新。最后更新：需求 011 完成（依赖倒置 + example 组装）。
 
-## 0. 三层架构（内核 / 中间件 / 连接器，RFC-009）
+## 0. 三层架构与**依赖图**（RFC-009 / RFC-011）
 
-- **内核 `kernel/`**：前后端(api/web)、账号权限(auth-core)、存储防腐、**Agent Loop + skill + LLMProvider**(agent-loop/aisdk)、运行溯源与日志(run-store)。
-- **中间件(层) `middleware/`**：L1-L6 经固定契约约束的**可组装能力**（层越多，分析溯源越强）+ 组装框架(pipeline/plugin-core)。
-- **连接器(plugin) `connectors/`**：中间件的**外部数据源/配置**（Langfuse 等），可带 **DSL** 让用户非部署式注入配置/skill。
-- 存储溯源：连接器**两种版本**(安装包/配置)落库；每次运行**每层入参**落库（除 L1，L1 大数据按接口按需查）；可 runId 溯源 + 重试。
-
-## 1. 六层 + 五契约（层间隔离）
-
-每层是独立包，**只依赖下层的稳定契约**（`@tengxiaohtx/contracts`），可独立测试、独立存活。契约缝 = 换实现不换契约、上层无感（D9.2 / A6 / D3）。
+**依赖规则（唯一方向）**：`kernel/ ← middleware/ ← connectors/ ← example/`
+——内核**不依赖**中间件与连接器；组装与启动全在 `example/`。
 
 ```
-L6 呈现/路由   apps/web (AppShell/ExecDashboard/ComparisonReport)
-               + packages/report + packages/compare + packages/report-llm
+┌──────────────────── example/  组装 + 启动（依赖全部）────────────────────────┐
+│ app/  assemble.ts 装配 ServerServices（连接器+管道+插件+LLM）· main.ts 监听    │
+│ web/  Vite 应用：注入 authApi / DataClient（local 演示态在浏览器内装配管道）     │
+│ docker-compose.yml  一键起 Postgres + Redis + app + web · .env.example       │
+└───────────────┬─────────────────────────────────────────┬───────────────────┘
+                │ 依赖                                     │ 依赖
+                ▼                                         ▼
+┌──── connectors/  外部数据源/配置(+DSL) ────┐   ┌──── middleware/  L1-L6 可组装能力 ────┐
+│ mock      内置 fixture 连接器             │──▶│ ingest provenance metrics attribution │
+│ example   财务/BI 外部数据 · skill · DSL   │   │ decision report compare              │
+│           · 存储声明 · L1 HTTP 源          │   │ pipeline(组装) plugin-core(插件宿主)   │
+└───────────────┬───────────────────────────┘   │ report-llm                            │
+                │ 依赖                           └──────────────┬───────────────────────┘
+                └────────────────┬─────────────────────────────┘ 依赖
+                                 ▼
+┌──────────────── kernel/  内核（只依赖内核自身）──────────────────────────────┐
+│ contracts   全局共享契约/词汇（零依赖：五道缝 + 指标目录 + 端口类型）           │
+│ api         HTTP 外壳：认证/RBAC/管理端/溯源/插件端点 + **领域端口**(ports.ts) │
+│ web         UI 库：组件 + AuthProvider + api 模式客户端（注入式）             │
+│ auth-core   账号/角色/项目授权 + JWT/scrypt + RBAC                          │
+│ persistence 存储防腐层：端口 + 内存 / Prisma(Postgres) / Redis 适配           │
+│ run-store   日志接口 + 运行溯源（连接器双版本 + 每层入参）                     │
+│ agent-loop  LLMProvider + skill + 最小 Agent Loop     aisdk  AI SDK 适配器   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+> **两个正交方向**：**依赖**向下（编译期，上表箭头）；**数据流/管道组装**自下而上 L1→L6（RFC-008）。
+> 内核只声明端口（`ProjectDirectory / ReportService / PluginDirectory`），example 用 middleware + connectors 实现并注入。
+
+- **中间件(层)**：层越多，分析溯源能力越强；层间靠固定契约约束，可按需切片组装（App 可只选 L4-L6）。
+- **连接器(plugin)**：中间件的外部数据源/配置（Langfuse 等），可带 **DSL** 让用户非部署式注入配置/skill。
+- **存储溯源**：连接器**两种版本**（安装包/配置）落库；每次运行**每层入参**落库（除 L1，L1 大数据按接口按需查）；可 runId 溯源 + 重试。
+
+## 1. 中间件六层 + 五契约（层间隔离）
+
+每层是独立包，**只依赖下层的稳定契约**（`@tengxiaohtx/contracts`，位于 kernel），可独立测试、独立存活。契约缝 = 换实现不换契约、上层无感（D9.2 / A6 / D3）。
+
+```
+L6 呈现/路由   kernel/web(UI 库) + example/web(应用)
+               + middleware/report + middleware/compare + middleware/report-llm
       ▲ 契约④ ReportView / DecisionRecord / ComparisonView / ComparativeNarrative
-L5 决策        packages/decision（门禁政策 + assurance case）
+L5 决策        middleware/decision（门禁政策 + assurance case）
       ▲ 契约③ AttributionResult
-L4 归因        packages/attribution（案例驱动三责任方分布）
+L4 归因        middleware/attribution（案例驱动三责任方分布）
       ▲ 契约② MetricCaseBundle
-L3 计算        packages/metrics（bootstrap CI / pass^k / Cost-of-Pass）
+L3 计算        middleware/metrics（bootstrap CI / pass^k / Cost-of-Pass）
       ▲ 契约① Provenance 查询
-L2 证据/血缘   packages/provenance（Source→Case→Metric 图 + 投影下钻）
+L2 证据/血缘   middleware/provenance（Source→Case→Metric 图 + 投影下钻）
       ▲ 契约⓪ CanonicalSignal / VersionSignals
-L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest（真实轨迹：文件/HTTP + 解析器插件）
+L1 接入/适配   connectors/mock（内置 fixture）· middleware/ingest（真实轨迹：文件/HTTP + 解析器插件）
 ```
 
 > **六层贯通**：`fetchSignals(L1)` → `buildProvenance(L2)` → `computeEvaluation(L3)` → `buildAttribution(L4)` → `decide(L5)` → `buildExecReportView/buildComparison(L6)`。
 > 指标目录 `METRIC_CATALOG`（contracts）是各层共享的指标词汇。
 > **L1 真实接入**（RFC-006）：`ingest` 提供 File/HTTP 源 + 12 种轨迹解析器插件（claude-code/codex/…/langfuse/langsmith/harbor），部署容器按 `KAOGONGSI_PARSERS` 选配；`IngestConnector` 与 `MockConnector` 同实现 `DataConnector`，上层零改动。
 
-## 2. 已实现（截至需求 004：六层贯通）
+## 2. 已实现（截至需求 011）
 
 | 包 | 角色 | 状态 |
 |---|---|---|
@@ -52,10 +84,12 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/agent-loop` | 内核 LLMProvider + skill + 最小 Agent Loop（RFC-009） | ✅ |
 | `@tengxiaohtx/run-store` | 内核日志接口 + 运行溯源（连接器两版本 + 每层入参，除 L1）（RFC-009） | ✅ |
 | `@tengxiaohtx/persistence` | 存储防腐层：Prisma(Postgres) + ioredis 适配 StoragePort/DocumentStore/RunStore/KvStore（RFC-010） | ✅ |
-| `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
-| `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 + 插件面板 | ✅ |
+| `@tengxiaohtx/api`(kernel) | Fastify 外壳：认证 + RBAC + 管理端 + 溯源/插件端点 + **领域端口**（不依赖 middleware） | ✅ |
+| `@tengxiaohtx/web`(kernel) | UI 库：登录/角色门禁/管理台/报告/对比/插件面板 + api 模式客户端（注入式） | ✅ |
+| `@tengxiaohtx/example-app` | **组装层**：装配连接器+分层管道+插件宿主+LLM → 内核 ServerServices；启动入口 | ✅ |
+| `@tengxiaohtx/example-web` | **应用层**：Vite 应用（api/local 双模式装配、Pages 站点、Tailwind） | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
-| `@tengxiaohtx/plugin-example` · `@tengxiaohtx/aisdk` | 跨层示例插件 · Vercel AI SDK LLM Provider | ✅ |
+| `@tengxiaohtx/connector-example` · `@tengxiaohtx/aisdk` | 跨层示例连接器（财务/BI/skill/DSL/存储） · 内核 AI SDK LLM 适配器 | ✅ |
 | `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(5) 共 14 场景 | ✅ |
 
 **六层全部落地**。**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L3 真实成本/延迟分布、分层指标、pass^k 多 run 估计；L2 大 payload 外置 + 跨 run baggage 关联；反事实验证（REFLECT）。
@@ -98,3 +132,4 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | 008 可组装分层管道 + 内核/插件分离 | `docs/rfcs/RFC-008-composable-pipeline.md` | `docs/stories/US-008-composable-pipeline.md` | ✅ 完成 |
 | 009 三层架构 + 内核 Agent Loop + 运行溯源 | `docs/rfcs/RFC-009-three-tier-kernel-runstore.md` | `docs/stories/US-009-three-tier-kernel-runstore.md` | ✅ 完成 |
 | 010 存储防腐层 + Postgres/Prisma + Redis example | `docs/rfcs/RFC-010-persistence-acl-postgres-redis.md` | `docs/stories/US-010-persistence-acl-postgres-redis.md` | ✅ 完成 |
+| 011 依赖倒置（内核干净）+ example 组装启动 | `docs/rfcs/RFC-011-dependency-inversion-example-assembly.md` | `docs/stories/US-011-dependency-inversion-example-assembly.md` | ✅ 完成 |

@@ -1,7 +1,7 @@
 # AGENTS.md — 考功司工作流与约定（固化）
 
 > 本文件固化本仓库的**协作工作流、分层契约与不可违反的约定**。任何人（含 AI agent）在本仓库改动前先读本文件。
-> 面向机器与人类协作者；随架构演进更新。最后更新：RFC-002 完成。
+> 面向机器与人类协作者；随架构演进更新。最后更新：RFC-011 完成（依赖倒置 + example 组装）。
 
 ## 0. 项目一句话
 
@@ -12,23 +12,37 @@
 
 ## 1. 架构：三层（内核 / 中间件 / 连接器）+ 六层中间件
 
-**三层定性（RFC-009）**：**内核 `kernel/`**（前后端、账号权限、存储防腐、Agent Loop + skill + **LLMProvider**、运行溯源与日志）· **中间件(层) `middleware/`**（L1-L6 可组装能力 + 组装框架）· **连接器(plugin) `connectors/`**（中间件的外部数据源/配置，如 Langfuse；可带 DSL 注入配置/skill）。
+**三层（RFC-009）+ 依赖规则（RFC-011）**：
+
+```
+kernel/ ← middleware/ ← connectors/ ← example/     （箭头 = 依赖方向；内核不依赖上层）
+```
+
+- **内核 `kernel/`**：contracts(共享契约) · api(HTTP 外壳 + 领域端口) · web(UI 库) · auth-core · persistence(存储防腐层) · run-store(日志/溯源) · agent-loop + aisdk(**LLMProvider**)。
+- **中间件(层) `middleware/`**：L1-L6 可组装能力 + pipeline/plugin-core 组装框架。
+- **连接器(plugin) `connectors/`**：中间件的外部数据源/配置（Langfuse 等），可带 DSL 注入配置/skill。
+- **`example/`**：**组装 + 启动**（app 装配后端整机、web 是 Vite 应用、docker-compose 一键起）。改装配请改 example，别把具体实现塞回内核。
 
 每个中间件层是**独立包**，只依赖下层的**稳定契约**（`@tengxiaohtx/contracts`），可独立测试、独立存活。换实现不换契约、上层无感（D9.2 / A6 / D3）。
 
 | 层 | 包 | 上缘契约 |
 |---|---|---|
-| L6 呈现/路由 | `apps/web` · `packages/report` · `packages/compare` · `packages/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
-| L5 决策 | `packages/decision` | AttributionResult |
-| L4 归因 | `packages/attribution` | MetricCaseBundle |
-| L3 计算 | `packages/metrics`（bootstrap CI / pass^k / Cost-of-Pass） | Provenance 查询 |
-| L2 证据/血缘 | `packages/provenance`（Source→Case→Metric 图） | CanonicalSignal |
-| L1 接入/适配 | `packages/connector-mock`（内置 fixture）· `packages/ingest`（真实轨迹：File/HTTP 源 + 解析器插件） | — |
-| 契约（贯穿） | `packages/contracts`（含指标目录 METRIC_CATALOG） | 五道缝的类型定义 |
-| 横切 · 认证 | `packages/auth-core`（账号/角色/授权 + StoragePort + JWT/scrypt + RBAC） | StoragePort（内存/文件，可换 Postgres） |
-| 横切 · 插件 | `packages/plugin-core`（L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储）· `packages/pipeline`（可组装分层管道）· `plugins/example` · `plugins/aisdk` | Plugin manifest / LayerStage / LlmProvider / SkillTemplate |
+| L6 呈现/路由 | `kernel/web`(UI 库) · `example/web`(应用) · `middleware/report` · `middleware/compare` · `middleware/report-llm` | ReportView / DecisionRecord / ComparisonView / ComparativeNarrative |
+| L5 决策 | `middleware/decision` | AttributionResult |
+| L4 归因 | `middleware/attribution` | MetricCaseBundle |
+| L3 计算 | `middleware/metrics`（bootstrap CI / pass^k / Cost-of-Pass） | Provenance 查询 |
+| L2 证据/血缘 | `middleware/provenance`（Source→Case→Metric 图） | CanonicalSignal |
+| L1 接入/适配 | `connectors/mock`（内置 fixture）· `middleware/ingest`（真实轨迹：File/HTTP 源 + 解析器插件） | — |
+| 契约（贯穿） | `kernel/contracts`（含指标目录 METRIC_CATALOG） | 五道缝的类型定义 |
+| 内核 · 认证 | `kernel/auth-core`（账号/角色/授权 + JWT/scrypt + RBAC） | StoragePort |
+| 内核 · 存储防腐 | `kernel/persistence`（端口 + 内存 / Prisma-Postgres / Redis） | DocumentStore / KvStore / StoragePort / RunStore |
+| 内核 · 溯源日志 | `kernel/run-store`（Logger + RunStore：连接器双版本 + 每层入参） | RunStore |
+| 内核 · Agent | `kernel/agent-loop`（LLMProvider + skill + Agent Loop）· `kernel/aisdk` | LlmProvider / SkillTemplate |
+| 组装框架 | `middleware/pipeline`（可组装分层管道）· `middleware/plugin-core`（插件宿主 + UI DSL） | LayerStage / Plugin manifest |
+| 连接器 | `connectors/mock` · `connectors/example`（财务/BI/skill/DSL/存储声明） | DataConnector / Plugin |
+| **组装 + 启动** | `example/app`（后端整机装配 + 启动）· `example/web`（Vite 应用）· `example/docker-compose.yml` | 注入内核 ServerServices |
 
-> **目录**：内核在 `packages/*`，插件在 `plugins/*`。**两个相反的方向**（RFC-008）：内核依赖自上而下（上层 import 下层契约）；插件组装自下而上（下层输出喂上层输入，如 `decision(L5)` 读 `attribution(L4)` 出参）。App 可选层切片（如 L4-L6），插件按 `LayerStage` 向任一层贡献并被 `pipeline` 组装。
+> **两个正交方向**：**依赖**向下 `kernel ← middleware ← connectors ← example`（RFC-011，内核不依赖上层）；**管道组装/数据流**自下而上 L1→L6（RFC-008，`decision(L5)` 读 `attribution(L4)` 出参）。App 可选层切片（如 L4-L6），插件按 `LayerStage` 向任一层贡献并被 `pipeline` 组装。
 
 **六层贯通管道**：`connector.fetchSignals(L1)` → `buildProvenance(L2)` → `computeEvaluation(L3)` → `buildAttribution(L4)` → `decide(L5)` → `l6-report.assembleVersionReport` → 视图。连接器只取原始信号，血缘/指标/归因/决策各由独立层计算。
 
@@ -65,9 +79,13 @@ pnpm typecheck   # 全部类型检查
 pnpm build       # 全部构建
 pnpm e2e         # Playwright 端到端（自动 build+preview web）
 
-pnpm --filter @tengxiaohtx/<pkg> test   # 单层独立测试（验证隔离）
-pnpm --filter @tengxiaohtx/api dev      # 后端 :3001
-pnpm --filter @tengxiaohtx/web dev      # 前端 :5173
+pnpm --filter @tengxiaohtx/<pkg> test          # 单层独立测试（验证隔离）
+pnpm --filter @tengxiaohtx/example-app dev    # 后端（组装层）:3001
+pnpm --filter @tengxiaohtx/example-web dev    # 前端（应用层）:5173
+pnpm stack:up                                 # example 一键全栈（PG+Redis+app+web）
+
+# 依赖规则自检：kernel 只应依赖 kernel 内部包
+grep -h '"@tengxiaohtx/' kernel/*/package.json | grep -oE '@tengxiaohtx/[a-z-]+' | sort -u
 ```
 
 首次装 E2E 浏览器：`pnpm --filter @tengxiaohtx/e2e exec playwright install chromium`。
@@ -75,9 +93,9 @@ pnpm --filter @tengxiaohtx/web dev      # 前端 :5173
 ## 5. 代码风格
 
 - TypeScript **strict**（`noUncheckedIndexedAccess`、`verbatimModuleSyntax`、`noImplicitOverride`）。
-- 计算层（l6-report / l6-compare）为**纯函数、无 IO**；副作用集中在连接器/端口/api/web。
+- 计算层（middleware/report · middleware/compare 等）为**纯函数、无 IO**；副作用集中在连接器/端口/api/web。
 - 契约包只放**类型与不变量**，不含业务逻辑。
-- UI：Tailwind v4 + `src/index.css` 的语义设计令牌（取自 dataviz skill validated 调色板）；组件只用语义类（`bg-surface`/`text-secondary`/`text-tech`…），换肤在令牌一处完成。
+- UI：组件在 `kernel/web`（不依赖 middleware）；Tailwind v4 + `example/web/src/index.css` 的语义设计令牌（取自 dataviz skill validated 调色板）；组件只用语义类（`bg-surface`/`text-secondary`/`text-tech`…），换肤在令牌一处完成。
 - **E2E 稳定契约**：`data-testid` 是测试面，重构 UI 不得删改既有 testid。
 
 ## 6. 背景资料
