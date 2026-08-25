@@ -74,6 +74,26 @@ export KAOGONGSI_LLM_MODEL=gpt-4o-mini
 # 服务端 POST /api/report/compare { generateNarrative:true } 即用真实模型；未配置则用离线模板
 ```
 
+## 企业化部署（账号 / 角色 / 全栈 / Pages）
+
+参考 Langfuse 的自托管思路，提供**本地自包含全栈**与**账号系统**：
+
+```bash
+docker compose up --build     # 或 pnpm stack:up —— 一键起后端+前端
+# http://localhost:8080 —— 首个注册用户自动成为管理员
+```
+
+- **账号 / 角色**：`管理员 / 技术 / 财务 / BI`。管理员在「管理台」建用户、改角色、按项目勾选授权。
+- **项目授权**：非管理员只见被授权项目；**角色决定可见报告分区**（财务只见财务/归因/依据，技术见质量/护栏/过程质量…）。
+- **端口化**：账号存储 `StoragePort`（默认 JSON 文件卷，可换 Postgres）；LLM 出口 `ReportGenerator`（默认离线模板，可换真实模型）——均不泄漏进内核（D3）。
+- **两种运行模式**：`api`（真实后端鉴权，自托管全栈）/ `local`（浏览器演示态，无后端）——`VITE_DATA_MODE` 切换。
+
+**GitHub Pages**（对外站点：介绍 + 操作文档 + Playground）：推送 `main` 触发 `.github/workflows/pages.yml` 自动构建部署（需在仓库 Settings → Pages 选 “GitHub Actions” 来源）。本地预览站点：
+
+```bash
+VITE_SITE_MODE=pages pnpm --filter @tengxiaohtx/web dev
+```
+
 ## 文档
 
 - `AGENTS.md` — 协作工作流与不可违反的约定（先读这个）

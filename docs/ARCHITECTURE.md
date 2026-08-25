@@ -38,9 +38,10 @@ L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 B
 | `@tengxiaohtx/l6-report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
 | `@tengxiaohtx/l6-compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
 | `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
-| `apps/api` | Fastify；exec(legacy) / projects / versions / version / compare（走六层管道 + 注入生成器） | ✅ |
-| `apps/web` | Tailwind UI：项目/版本选择 + 单版本报告 + 双版本对比 + 生成对比报告 + 深浅色 | ✅ |
-| `e2e` | Playwright；exec-dashboard(5) + project-version-compare(4) 共 9 场景 | ✅ |
+| `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
+| `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
+| `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 | ✅ |
+| `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(4) 共 13 场景 | ✅ |
 
 **六层全部落地**。**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L3 真实成本/延迟分布、分层指标、pass^k 多 run 估计；L2 大 payload 外置 + 跨 run baggage 关联；反事实验证（REFLECT）。
 
@@ -76,3 +77,4 @@ L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 B
 | 002 项目-版本评测报告与对比 | `docs/rfcs/RFC-002-project-version-compare.md` | `docs/stories/US-002-project-version-compare.md` | ✅ 完成 |
 | 003 归因引擎 + 决策引擎（做实 L4/L5） | `docs/rfcs/RFC-003-attribution-decision-engines.md` | `docs/stories/US-003-attribution-decision-engines.md` | ✅ 完成 |
 | 004 贯通 L1→L3（信号/血缘/可信指标） | `docs/rfcs/RFC-004-ingest-provenance-metrics.md` | `docs/stories/US-004-ingest-provenance-metrics.md` | ✅ 完成 |
+| 005 企业化（账号/角色/授权 + 全栈 + Pages） | `docs/rfcs/RFC-005-enterprise-auth-stack-pages.md` | `docs/stories/US-005-enterprise-auth-stack-pages.md` | ✅ 完成 |

@@ -83,6 +83,21 @@ export KAOGONGSI_LLM_MODEL=gpt-4o-mini
 # unset → offline deterministic template
 ```
 
+## Enterprise (accounts / roles / full stack / Pages)
+
+Self-hostable full stack + account system (Langfuse-style):
+
+```bash
+docker compose up --build     # or: pnpm stack:up
+# http://localhost:8080 — the first registered user becomes admin
+```
+
+- **Accounts / roles**: `admin / tech / finance / bi`. Admin manages users, roles, and per-project grants in the console.
+- **Project authorization**: non-admins see only granted projects; **role decides visible report sections**.
+- **Ports**: account storage `StoragePort` (JSON-file volume by default, swappable to Postgres); LLM `ReportGenerator` (offline template by default) — never leaked into the core (D3).
+- **Two modes**: `api` (real backend auth, self-hosted) / `local` (in-browser demo, no backend) via `VITE_DATA_MODE`.
+- **GitHub Pages** (intro + docs + playground): pushing `main` triggers `.github/workflows/pages.yml` (enable Pages → “GitHub Actions” in repo settings).
+
 ## Docs
 
 - `AGENTS.md` — collaboration workflow & non-negotiables (read first)

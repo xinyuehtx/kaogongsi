@@ -23,6 +23,7 @@
 | L2 证据/血缘 | `packages/l2-provenance`（Source→Case→Metric 图） | CanonicalSignal |
 | L1 接入/适配 | `packages/connector-mock`（只吐 CanonicalSignal；+ 未来 BI/Langfuse/L5 连接器） | — |
 | 契约（贯穿） | `packages/contracts`（含指标目录 METRIC_CATALOG） | 五道缝的类型定义 |
+| 横切 · 认证 | `packages/auth-core`（账号/角色/授权 + StoragePort + JWT/scrypt + RBAC） | StoragePort（内存/文件，可换 Postgres） |
 
 **六层贯通管道**：`connector.fetchSignals(L1)` → `buildProvenance(L2)` → `computeEvaluation(L3)` → `buildAttribution(L4)` → `decide(L5)` → `l6-report.assembleVersionReport` → 视图。连接器只取原始信号，血缘/指标/归因/决策各由独立层计算。
 
