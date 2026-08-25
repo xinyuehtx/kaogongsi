@@ -165,6 +165,34 @@ describe('api: 插件系统（RFC-007）', () => {
   });
 });
 
+describe('api: 运行溯源 / 重试 / 连接器版本（RFC-009）', () => {
+  it('出报告后可按 runId 溯源每层入参，并重试重放', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
+    const runId = res.headers['x-run-id'] as string;
+    expect(runId).toBeTruthy();
+
+    const run = (await app.inject({ method: 'GET', url: `/api/runs/${runId}`, headers: auth(token) })).json() as { meta: { versionId: string }; layers: { layer: string }[] };
+    expect(run.meta.versionId).toBe('v2.0');
+    // 每层入参落库（除 L1）：attribution/decision/report
+    expect(run.layers.map((l) => l.layer)).toEqual(['attribution', 'decision', 'report']);
+
+    const retry = await app.inject({ method: 'POST', url: `/api/runs/${runId}/retry`, headers: auth(token) });
+    expect(retry.statusCode).toBe(200);
+    expect((retry.json() as ReportView).audience).toBe('exec');
+  });
+
+  it('记录连接器版本；/api/connector-versions 可查', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
+    const versions = (await app.inject({ method: 'GET', url: '/api/connector-versions', headers: auth(token) })).json() as { connectorId: string }[];
+    expect(versions.length).toBeGreaterThan(0);
+    expect(versions[0]?.connectorId).toBeTruthy();
+  });
+});
+
 describe('api: 轨迹接入连接器（RFC-006，端到端）', () => {
   function claudeRun(version: string, verdict: 'pass' | 'fail'): unknown {
     return [

@@ -1,7 +1,14 @@
 # 项目架构文档（L2，随迭代更新）
 
 > 考功司（户部下属评定官员绩效之司→隐喻 Agent 绩效考评）的实现架构。对应总 RFC：`.context/rfc/RFC.md`。
-> 本文档随每个需求迭代更新。最后更新：需求 004 完成（六层贯通）。
+> 本文档随每个需求迭代更新。最后更新：需求 009 完成（三层架构）。
+
+## 0. 三层架构（内核 / 中间件 / 连接器，RFC-009）
+
+- **内核 `kernel/`**：前后端(api/web)、账号权限(auth-core)、存储防腐、**Agent Loop + skill + LLMProvider**(agent-loop/aisdk)、运行溯源与日志(run-store)。
+- **中间件(层) `middleware/`**：L1-L6 经固定契约约束的**可组装能力**（层越多，分析溯源越强）+ 组装框架(pipeline/plugin-core)。
+- **连接器(plugin) `connectors/`**：中间件的**外部数据源/配置**（Langfuse 等），可带 **DSL** 让用户非部署式注入配置/skill。
+- 存储溯源：连接器**两种版本**(安装包/配置)落库；每次运行**每层入参**落库（除 L1，L1 大数据按接口按需查）；可 runId 溯源 + 重试。
 
 ## 1. 六层 + 五契约（层间隔离）
 
@@ -42,6 +49,8 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/pipeline` | 可组装分层管道：内核默认 stage + buildStages/runPipeline（自下而上组装，RFC-008） | ✅ |
 | `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
 | `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
+| `@tengxiaohtx/agent-loop` | 内核 LLMProvider + skill + 最小 Agent Loop（RFC-009） | ✅ |
+| `@tengxiaohtx/run-store` | 内核日志接口 + 运行溯源（连接器两版本 + 每层入参，除 L1）（RFC-009） | ✅ |
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
 | `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 + 插件面板 | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
@@ -86,3 +95,4 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | 006 数据接入（本地文件/HTTP + 解析器插件） | `docs/rfcs/RFC-006-data-ingestion-parsers.md` | `docs/stories/US-006-data-ingestion-parsers.md` | ✅ 完成 |
 | 007 全链路插件系统（跨层 + DSL + NoSQL/Redis） | `docs/rfcs/RFC-007-plugin-system.md` | `docs/stories/US-007-plugin-system.md` | ✅ 完成 |
 | 008 可组装分层管道 + 内核/插件分离 | `docs/rfcs/RFC-008-composable-pipeline.md` | `docs/stories/US-008-composable-pipeline.md` | ✅ 完成 |
+| 009 三层架构 + 内核 Agent Loop + 运行溯源 | `docs/rfcs/RFC-009-three-tier-kernel-runstore.md` | `docs/stories/US-009-three-tier-kernel-runstore.md` | ✅ 完成 |

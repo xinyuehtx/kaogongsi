@@ -66,16 +66,24 @@ export function buildStages(spec: PipelineSpec): LayerStage[] {
   return stages;
 }
 
-/** 顺序运行 stage，逐层把产出合并回 ctx。 */
-export async function runPipeline(stages: LayerStage[], seed: LayerContext): Promise<LayerContext> {
+/** 运行期钩子：每层 stage 运行时回调（供落库入参/溯源，RFC-009）。 */
+export interface RunHooks {
+  onStage?: (stage: LayerStage, inputCtx: LayerContext, patch: Partial<LayerContext>) => void | Promise<void>;
+}
+
+/** 顺序运行 stage，逐层把产出合并回 ctx；onStage 拿到该层入参（合并前）与产出。 */
+export async function runPipeline(stages: LayerStage[], seed: LayerContext, hooks: RunHooks = {}): Promise<LayerContext> {
   let ctx: LayerContext = { ...seed };
   for (const stage of stages) {
-    ctx = { ...ctx, ...(await stage.run(ctx)) };
+    const inputCtx = ctx; // 该层入参（含下层产出）
+    const patch = await stage.run(inputCtx);
+    await hooks.onStage?.(stage, inputCtx, patch);
+    ctx = { ...ctx, ...patch };
   }
   return ctx;
 }
 
 /** 便捷：组装 + 运行。 */
-export async function runLayers(spec: PipelineSpec, seed: LayerContext): Promise<LayerContext> {
-  return runPipeline(buildStages(spec), seed);
+export async function runLayers(spec: PipelineSpec, seed: LayerContext, hooks?: RunHooks): Promise<LayerContext> {
+  return runPipeline(buildStages(spec), seed, hooks);
 }

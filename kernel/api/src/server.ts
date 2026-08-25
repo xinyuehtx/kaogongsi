@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import type { DataConnector, ReportGenerator } from '@tengxiaohtx/contracts';
+import { randomUUID } from 'node:crypto';
+import type { DataConnector, LayerContext, ReportGenerator } from '@tengxiaohtx/contracts';
 import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
 import { computeEvaluation } from '@tengxiaohtx/metrics';
 import { buildStages, runPipeline } from '@tengxiaohtx/pipeline';
@@ -7,6 +8,14 @@ import { buildComparison } from '@tengxiaohtx/compare';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
 import { createReportGenerator } from '@tengxiaohtx/report-llm';
+import {
+  ConsoleLogger,
+  FileLogger,
+  FileRunStore,
+  InMemoryRunStore,
+  type Logger,
+  type RunStore,
+} from '@tengxiaohtx/run-store';
 import {
   InMemoryDocumentStore,
   InMemoryKvStore,
@@ -36,6 +45,8 @@ export interface ServerDeps {
   storage?: StoragePort; // 账号/授权存储端口（默认内存，KAOGONGSI_DATA_DIR→文件）
   jwtSecret?: string;
   host?: PluginHost; // 全链路插件宿主（RFC-007，默认注册示例插件）
+  runStore?: RunStore; // 运行溯源存储（RFC-009）
+  logger?: Logger; // 服务端日志接口
 }
 
 interface CompareBody {
@@ -60,13 +71,17 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
   const host = deps.host ?? new PluginHost();
   if (!deps.host) host.registerAll(defaultPlugins);
   const pluginData = new PluginDataService(() => host.storageSchemas(), new InMemoryDocumentStore(), new InMemoryKvStore());
+  const dataDir = process.env.KAOGONGSI_DATA_DIR;
+  const runStore: RunStore = deps.runStore ?? (dataDir ? new FileRunStore(`${dataDir}/runs`) : new InMemoryRunStore());
+  const logger: Logger = deps.logger ?? (dataDir ? new FileLogger(`${dataDir}/logs`) : new ConsoleLogger());
+  const now = (): string => new Date().toISOString();
 
   const drillableOf = (evidenceLevel: string): boolean =>
     connector.capabilities().drillable && evidenceLevel !== 'metric-only';
 
-  // 六层管道 + 插件：合并指标目录 + 派生信号 + 并入外部数据（财务/BI），
-  // 归因→决策→报告经可组装管道（RFC-008），插件可替换任一层 stage。
-  const runVersion = async (projectId: string, versionId: string) => {
+  // 六层管道 + 插件 + 溯源：合并目录/派生/外部数据 → 组装管道（归因→决策→报告），
+  // 每层入参落库（除 L1；L1 大对象走连接器按需查），记录连接器两种版本。
+  const runVersion = async (projectId: string, versionId: string, actor?: string): Promise<{ ctx: LayerContext; runId: string }> => {
     const { version, signals } = await connector.fetchSignals(projectId, versionId);
     const ev = computeEvaluation(version, host.applyDerivations(signals), host.mergedCatalog(METRIC_CATALOG));
     for (const e of host.externalData()) {
@@ -76,8 +91,30 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
         /* 外部数据源不可用不阻断报告 */
       }
     }
+    const runId = randomUUID();
+    runStore.putConnectorVersion({ connectorId: connector.id, packageVersion: connector.kind, at: now(), meta: { versionId } });
+    runStore.startRun({ runId, at: now(), connectorId: connector.id, packageVersion: connector.kind, projectId, versionId, actor });
+    let seq = 0;
     const stages = buildStages({ layers: ['attribution', 'decision', 'report'], resolve: (l) => host.stageFor(l) });
-    return runPipeline(stages, { version, evaluation: ev, drillable: drillableOf(version.evidenceLevel) });
+    const ctx = await runPipeline(stages, { version, evaluation: ev, drillable: drillableOf(version.evidenceLevel) }, {
+      onStage: (stage, inputCtx) => {
+        // 落库该层入参（合并前 ctx；不含 L1 signals）
+        runStore.putLayer({ runId, seq: seq++, layer: stage.layer, stageId: stage.id, input: inputCtx, at: now() });
+      },
+    });
+    logger.info('report.run', { runId, projectId, versionId, actor, connector: connector.id });
+    return { ctx, runId };
+  };
+
+  // 从已存的某层入参重跑（溯源/重试）：不重新拉 L1，直接用落库入参重放上层。
+  const retryRun = async (runId: string): Promise<LayerContext | undefined> => {
+    const { meta, layers } = runStore.getRun(runId);
+    const first = layers[0];
+    if (!meta || !first) return undefined;
+    const stages = buildStages({ layers: ['attribution', 'decision', 'report'], resolve: (l) => host.stageFor(l) });
+    const ctx = await runPipeline(stages, first.input as LayerContext);
+    logger.info('report.retry', { runId, projectId: meta.projectId, versionId: meta.versionId });
+    return ctx;
   };
 
   const currentUser = (req: FastifyRequest): User | null => {
@@ -202,7 +239,8 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const { projectId, versionId } = req.query as { projectId?: string; versionId?: string };
     if (!projectId || !versionId) return reply.code(400).send({ error: '缺少 projectId 或 versionId' });
     if (!canAccessProject(u.role, grantedIds(u), projectId)) return reply.code(403).send({ error: '无此项目访问权' });
-    const ctx = await runVersion(projectId, versionId);
+    const { ctx, runId } = await runVersion(projectId, versionId, u.email);
+    reply.header('x-run-id', runId);
     return filterViewForRole(ctx.view!, u.role);
   });
 
@@ -216,14 +254,50 @@ export function buildServer(deps: ServerDeps = {}): FastifyInstance {
     const projects = await connector.listProjects();
     const project = projects.find((p) => p.id === projectId);
     if (!project) return reply.code(404).send({ error: `未找到项目: ${projectId}` });
-    const [baseCtx, candCtx] = await Promise.all([
-      runVersion(projectId, baselineId),
-      runVersion(projectId, candidateId),
+    const [base, cand] = await Promise.all([
+      runVersion(projectId, baselineId, u.email),
+      runVersion(projectId, candidateId, u.email),
     ]);
-    const toReport = (ctx: Awaited<ReturnType<typeof runVersion>>) => ({ version: ctx.version!, decision: ctx.decision!, kpis: ctx.evaluation!.kpis });
-    const view = buildComparison(project, toReport(baseCtx), toReport(candCtx));
+    const toReport = (ctx: LayerContext) => ({ version: ctx.version!, decision: ctx.decision!, kpis: ctx.evaluation!.kpis });
+    const view = buildComparison(project, toReport(base.ctx), toReport(cand.ctx));
     if (generateNarrative) view.narrative = await reportGenerator.generate({ view });
     return view;
+  });
+
+  // ── 溯源 / 重试 / 连接器版本（RFC-009）──────────────────────
+  app.get('/api/runs', async (req, reply) => {
+    const u = requireUser(req, reply);
+    if (!u) return;
+    const { projectId } = req.query as { projectId?: string };
+    return runStore.listRuns(projectId ? { projectId } : undefined);
+  });
+
+  app.get('/api/runs/:runId', async (req, reply) => {
+    const u = requireUser(req, reply);
+    if (!u) return;
+    const { runId } = req.params as { runId: string };
+    const run = runStore.getRun(runId);
+    if (!run.meta) return reply.code(404).send({ error: '未找到运行' });
+    if (!canAccessProject(u.role, grantedIds(u), run.meta.projectId)) return reply.code(403).send({ error: '无此项目访问权' });
+    return run; // { meta, layers[] } —— 每层入参可溯源
+  });
+
+  app.post('/api/runs/:runId/retry', async (req, reply) => {
+    const u = requireUser(req, reply);
+    if (!u) return;
+    const { runId } = req.params as { runId: string };
+    const run = runStore.getRun(runId);
+    if (!run.meta) return reply.code(404).send({ error: '未找到运行' });
+    if (!canAccessProject(u.role, grantedIds(u), run.meta.projectId)) return reply.code(403).send({ error: '无此项目访问权' });
+    const ctx = await retryRun(runId);
+    if (!ctx) return reply.code(400).send({ error: '无可重试的入参' });
+    return filterViewForRole(ctx.view!, u.role);
+  });
+
+  app.get('/api/connector-versions', async (req, reply) => {
+    if (!requireUser(req, reply)) return;
+    const { connectorId } = req.query as { connectorId?: string };
+    return runStore.listConnectorVersions(connectorId);
   });
 
   // ── 插件（RFC-007）：清单 / UI DSL 表单 / 用户输入入库 ──────
