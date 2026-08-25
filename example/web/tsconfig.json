@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "composite": false,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"]
 }

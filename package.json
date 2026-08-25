@@ -14,9 +14,9 @@
     "typecheck": "turbo run typecheck --filter=!@tengxiaohtx/e2e",
     "dev": "turbo run dev --filter=!@tengxiaohtx/e2e",
     "e2e": "pnpm --filter @tengxiaohtx/e2e test",
-    "stack:up": "docker compose up --build",
-    "stack:down": "docker compose down",
-    "stack:clean": "docker compose down -v"
+    "stack:up": "docker compose -f example/docker-compose.yml up --build",
+    "stack:down": "docker compose -f example/docker-compose.yml down",
+    "stack:clean": "docker compose -f example/docker-compose.yml down -v"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

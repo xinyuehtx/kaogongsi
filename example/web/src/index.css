@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* 内核 UI 库的类名需被 tailwind 扫描到（RFC-011：UI 在 kernel/web，应用在 example/web） */
+@source '../../../kernel/web/src';
+
 /* 深浅色主题：由 <html data-theme="dark"> 切换，覆盖语义令牌即可整体换肤。 */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 

@@ -1,11 +1,11 @@
 import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
-import { authorizedProjectIds, filterViewForRole } from '@tengxiaohtx/auth-core/rbac';
-import { API_BASE, DATA_MODE, connectorIdFromUrl } from '../config.js';
-import type { Session } from '../auth/api.js';
+import { webConfig } from '../config.js';
 import { getToken } from '../auth/remote.js';
-import { loadComparison, loadProjects, loadVersionReport, loadVersions } from '../dataSource.js';
 
-/** 视图消费的数据面（与鉴权模式解耦）。 */
+/**
+ * 视图消费的数据面（端口）。内核只内置 **api 模式**实现（纯 fetch）；
+ * local 演示态（浏览器内跑分层管道）由应用层 example/web 实现并注入 —— 内核不依赖 middleware。
+ */
 export interface DataClient {
   listProjects(): Promise<ProjectSummary[]>;
   listVersions(projectId: string): Promise<VersionSummary[]>;
@@ -13,31 +13,10 @@ export interface DataClient {
   compare(projectId: string, baselineId: string, candidateId: string, generateNarrative: boolean): Promise<ComparisonView>;
 }
 
-/** local：浏览器内经连接器 + 六层管道计算，按当前会话的角色/授权做客户端过滤。 */
-class LocalDataClient implements DataClient {
-  constructor(private readonly session: Session, private readonly connectorId = connectorIdFromUrl()) {}
-
-  async listProjects(): Promise<ProjectSummary[]> {
-    const all = await loadProjects(this.connectorId);
-    const allowed = authorizedProjectIds(this.session.user.role, this.session.grants, all.map((p) => p.id));
-    return all.filter((p) => allowed.includes(p.id));
-  }
-  listVersions(projectId: string): Promise<VersionSummary[]> {
-    return loadVersions(this.connectorId, projectId);
-  }
-  async getVersionReport(projectId: string, versionId: string): Promise<ReportView> {
-    const view = await loadVersionReport(this.connectorId, projectId, versionId);
-    return filterViewForRole(view, this.session.user.role);
-  }
-  compare(projectId: string, baselineId: string, candidateId: string, generateNarrative: boolean): Promise<ComparisonView> {
-    return loadComparison(this.connectorId, projectId, baselineId, candidateId, { generateNarrative });
-  }
-}
-
 /** api：数据从后端拉取，后端已做鉴权 + 项目授权 + 角色过滤。 */
-class ApiDataClient implements DataClient {
+export class ApiDataClient implements DataClient {
   private async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, { headers: { authorization: `Bearer ${getToken() ?? ''}` } });
+    const res = await fetch(`${webConfig().apiBase}${path}`, { headers: { authorization: `Bearer ${getToken() ?? ''}` } });
     if (!res.ok) throw new Error((await res.json().then((b) => (b as { error?: string }).error).catch(() => '')) || `请求失败 ${res.status}`);
     return (await res.json()) as T;
   }
@@ -51,7 +30,7 @@ class ApiDataClient implements DataClient {
     return this.get(`/report/version?projectId=${encodeURIComponent(projectId)}&versionId=${encodeURIComponent(versionId)}`);
   }
   async compare(projectId: string, baselineId: string, candidateId: string, generateNarrative: boolean): Promise<ComparisonView> {
-    const res = await fetch(`${API_BASE}/report/compare`, {
+    const res = await fetch(`${webConfig().apiBase}/report/compare`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${getToken() ?? ''}` },
       body: JSON.stringify({ projectId, baselineId, candidateId, generateNarrative }),
@@ -59,8 +38,4 @@ class ApiDataClient implements DataClient {
     if (!res.ok) throw new Error(`请求失败 ${res.status}`);
     return (await res.json()) as ComparisonView;
   }
-}
-
-export function createDataClient(session: Session): DataClient {
-  return DATA_MODE === 'api' ? new ApiDataClient() : new LocalDataClient(session);
 }

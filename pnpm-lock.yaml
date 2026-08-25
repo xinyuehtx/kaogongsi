@@ -120,6 +120,64 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
+  example/web:
+    dependencies:
+      '@tengxiaohtx/auth-core':
+        specifier: workspace:*
+        version: link:../../kernel/auth-core
+      '@tengxiaohtx/compare':
+        specifier: workspace:*
+        version: link:../../middleware/compare
+      '@tengxiaohtx/connector-mock':
+        specifier: workspace:*
+        version: link:../../connectors/mock
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../kernel/contracts
+      '@tengxiaohtx/metrics':
+        specifier: workspace:*
+        version: link:../../middleware/metrics
+      '@tengxiaohtx/report':
+        specifier: workspace:*
+        version: link:../../middleware/report
+      '@tengxiaohtx/report-llm':
+        specifier: workspace:*
+        version: link:../../middleware/report-llm
+      '@tengxiaohtx/web':
+        specifier: workspace:*
+        version: link:../../kernel/web
+      react:
+        specifier: ^19.0.0
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.1.0
+        version: 4.3.3(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12))
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.0
+        version: 4.7.0(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12))
+      tailwindcss:
+        specifier: ^4.1.0
+        version: 4.3.3
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
   kernel/agent-loop:
     dependencies:
       '@tengxiaohtx/contracts':
@@ -254,24 +312,9 @@ importers:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
         version: link:../auth-core
-      '@tengxiaohtx/compare':
-        specifier: workspace:*
-        version: link:../../middleware/compare
-      '@tengxiaohtx/connector-mock':
-        specifier: workspace:*
-        version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tengxiaohtx/metrics':
-        specifier: workspace:*
-        version: link:../../middleware/metrics
-      '@tengxiaohtx/report':
-        specifier: workspace:*
-        version: link:../../middleware/report
-      '@tengxiaohtx/report-llm':
-        specifier: workspace:*
-        version: link:../../middleware/report-llm
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -279,27 +322,15 @@ importers:
         specifier: ^19.0.0
         version: 19.2.8(react@19.2.8)
     devDependencies:
-      '@tailwindcss/vite':
-        specifier: ^4.1.0
-        version: 4.3.3(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12))
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.18
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.4(@types/react@19.2.18)
-      '@vitejs/plugin-react':
-        specifier: ^4.3.0
-        version: 4.7.0(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12))
-      tailwindcss:
-        specifier: ^4.1.0
-        version: 4.3.3
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
-      vite:
-        specifier: ^6.0.0
-        version: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
       vitest:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)

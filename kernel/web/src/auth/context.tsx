@@ -1,8 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { DATA_MODE } from '../config.js';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { AuthApi, Session } from './api.js';
-import { LocalAuthApi } from './local.js';
-import { ApiAuthApi } from './remote.js';
 
 interface AuthState {
   status: 'loading' | 'anon' | 'authed';
@@ -16,8 +13,8 @@ interface AuthState {
 
 const Ctx = createContext<AuthState | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const api = useMemo<AuthApi>(() => (DATA_MODE === 'api' ? new ApiAuthApi() : new LocalAuthApi()), []);
+/** 认证实现由应用层注入（api 模式用内核 ApiAuthApi；local 演示态由 example/web 提供）。 */
+export function AuthProvider({ api, children }: { api: AuthApi; children: ReactNode }) {
   const [status, setStatus] = useState<AuthState['status']>('loading');
   const [session, setSession] = useState<Session | null>(null);
 

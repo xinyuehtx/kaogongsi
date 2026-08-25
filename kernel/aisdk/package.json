@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/plugin-aisdk",
+  "name": "@tengxiaohtx/aisdk",
   "version": "0.0.0",
   "private": true,
   "type": "module",

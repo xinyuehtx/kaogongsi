@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
 import { ROLE_LABEL } from '@tengxiaohtx/auth-core/types';
 import { useAuth } from './auth/context.js';
-import { createDataClient } from './data/client.js';
+import type { DataClient } from './data/client.js';
+import type { Session } from './auth/api.js';
 import { AppShell, Field, Select } from './components/AppShell.js';
 import { ExecDashboard } from './components/ExecDashboard.js';
 import { ComparisonReport } from './components/ComparisonReport.js';
@@ -16,7 +17,12 @@ type ViewName = 'report' | 'admin' | 'plugins';
 const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const INITIAL_MODE: Mode = params.get('mode') === 'compare' ? 'compare' : 'single';
 
-export function App() {
+/** 数据面工厂由应用层注入（api 模式传内核 ApiDataClient；local 演示态由 example/web 提供）。 */
+export interface AppProps {
+  createDataClient: (session: Session) => DataClient;
+}
+
+export function App({ createDataClient }: AppProps) {
   const { status, session, logout } = useAuth();
   const [dark, setDark] = useState(false);
   useEffect(() => {
@@ -25,13 +31,13 @@ export function App() {
 
   if (status === 'loading') return <p data-testid="loading" className="p-6 text-muted">加载中…</p>;
   if (status === 'anon' || !session) return <Login />;
-  return <Authed dark={dark} onToggleDark={() => setDark((v) => !v)} onLogout={logout} />;
+  return <Authed dark={dark} onToggleDark={() => setDark((v) => !v)} onLogout={logout} createDataClient={createDataClient} />;
 }
 
-function Authed({ dark, onToggleDark, onLogout }: { dark: boolean; onToggleDark: () => void; onLogout: () => Promise<void> }) {
+function Authed({ dark, onToggleDark, onLogout, createDataClient }: { dark: boolean; onToggleDark: () => void; onLogout: () => Promise<void> } & AppProps) {
   const { session } = useAuth();
   const s = session!;
-  const dataClient = useMemo(() => createDataClient(s), [s]);
+  const dataClient = useMemo(() => createDataClient(s), [createDataClient, s]);
   const isAdmin = s.user.role === 'admin';
 
   const [view, setView] = useState<ViewName>('report');

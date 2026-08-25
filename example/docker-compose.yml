@@ -29,8 +29,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: kernel/api/Dockerfile
+      context: ..
+      dockerfile: example/app/Dockerfile
     environment:
       PORT: '3001'
       KAOGONGSI_DATA_DIR: /data # 日志文件目录
@@ -59,8 +59,8 @@ services:
 
   web:
     build:
-      context: .
-      dockerfile: kernel/web/Dockerfile
+      context: ..
+      dockerfile: example/web/Dockerfile
     depends_on:
       - api
     ports:

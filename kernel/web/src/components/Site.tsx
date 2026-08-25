@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { App } from '../App.js';
+import { App, type AppProps } from '../App.js';
 import { AuthProvider } from '../auth/context.js';
+import type { AuthApi } from '../auth/api.js';
 
 type Tab = 'intro' | 'docs' | 'play';
 
@@ -125,7 +126,11 @@ export KAOGONGSI_LLM_MODEL=gpt-4o-mini`}</Code>
   );
 }
 
-export function Site() {
+export interface SiteProps extends AppProps {
+  authApi: AuthApi;
+}
+
+export function Site({ authApi, createDataClient }: SiteProps) {
   const [tab, go] = useHashTab();
   useEffect(() => {
     // 站点默认浅色；Playground 内可自行切换
@@ -140,8 +145,8 @@ export function Site() {
           <a href="#intro" className="text-tech underline">返回介绍</a> ·{' '}
           <a href="#docs" className="text-tech underline">文档</a>
         </div>
-        <AuthProvider>
-          <App />
+        <AuthProvider api={authApi}>
+          <App createDataClient={createDataClient} />
         </AuthProvider>
       </div>
     );

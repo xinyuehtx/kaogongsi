@@ -1,5 +1,5 @@
 import type { PublicUser, Role } from '@tengxiaohtx/auth-core/types';
-import type { AuthApi, CreateUserInput, Session, UserWithGrants } from './api.js';
+import type { AuthApi, CreateUserInput, Session, UserWithGrants } from '@tengxiaohtx/web';
 
 /**
  * 浏览器演示态账号（GitHub Pages playground 用，无后端）。

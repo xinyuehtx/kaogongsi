@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ROLE_LABEL, type Role } from '@tengxiaohtx/auth-core/types';
-import { DATA_MODE } from '../config.js';
+import { webConfig } from '../config.js';
 import { useAuth } from '../auth/context.js';
 
 const DEMO_ROLES: Role[] = ['admin', 'tech', 'finance', 'bi'];
@@ -46,11 +46,11 @@ export function Login() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-tech text-base font-bold text-white">考</span>
           <div className="leading-tight">
             <div className="text-base font-semibold">考功司</div>
-            <div className="text-[11px] text-muted">Agent 评测归因决策机 · {DATA_MODE === 'api' ? '企业版' : '演示态'}</div>
+            <div className="text-[11px] text-muted">Agent 评测归因决策机 · {webConfig().mode === 'api' ? '企业版' : '演示态'}</div>
           </div>
         </div>
 
-        {DATA_MODE === 'local' && (
+        {webConfig().mode === 'local' && (
           <div className="mb-4">
             <div className="mb-1.5 text-xs text-muted">一键以角色进入（演示授权 + 分区差异）</div>
             <div className="grid grid-cols-2 gap-2">

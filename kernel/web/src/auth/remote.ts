@@ -1,5 +1,5 @@
 import type { Role } from '@tengxiaohtx/auth-core/types';
-import { API_BASE } from '../config.js';
+import { webConfig } from '../config.js';
 import type { AuthApi, CreateUserInput, Session, UserWithGrants } from './api.js';
 
 const TOKEN_KEY = 'kg_token';
@@ -15,7 +15,7 @@ function setToken(t: string | null): void {
 
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${webConfig().apiBase}${path}`, {
     ...init,
     headers: {
       'content-type': 'application/json',

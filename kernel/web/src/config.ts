@@ -1,12 +1,22 @@
-/** 运行模式：api=真实后端鉴权（自托管全栈）；local=浏览器演示态（GitHub Pages playground）。 */
-export const DATA_MODE: 'api' | 'local' = import.meta.env.VITE_DATA_MODE === 'api' ? 'api' : 'local';
-export const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api';
+/**
+ * 内核 web 运行配置：由**应用层**（example/web）在启动时注入。
+ * 内核 UI 不读 import.meta.env、不知道具体连接器/中间件（RFC-011）。
+ */
+export type WebMode = 'api' | 'local';
 
-/** 站点模式：pages=渲染「介绍/文档/Playground」营销站（GitHub Pages）；否则直接进应用。 */
-export const SITE_MODE: boolean = import.meta.env.VITE_SITE_MODE === 'pages';
+export interface WebConfig {
+  /** api 基址（api 模式下 fetch 前缀）。 */
+  apiBase: string;
+  /** api=真实后端鉴权；local=浏览器演示态（由应用层装配管道）。 */
+  mode: WebMode;
+}
 
-/** local 模式下用哪个连接器 fixture（?connector= 可覆盖，用于演示/E2E）。 */
-export function connectorIdFromUrl(): string {
-  const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  return p.get('connector') ?? 'mock';
+let current: WebConfig = { apiBase: '/api', mode: 'local' };
+
+export function configureWeb(cfg: Partial<WebConfig>): void {
+  current = { ...current, ...cfg };
+}
+
+export function webConfig(): WebConfig {
+  return current;
 }

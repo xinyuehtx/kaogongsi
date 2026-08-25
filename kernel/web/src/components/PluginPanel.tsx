@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { API_BASE, DATA_MODE } from '../config.js';
+import { webConfig } from '../config.js';
 import { getToken } from '../auth/remote.js';
 import { Card, SectionTitle } from './ui.js';
 
@@ -10,7 +10,7 @@ interface UiForm { id: string; title: string; layer: string; storeTo?: string; f
 interface PluginSummary { id: string; name: string; version: string; layers: string[]; forms: UiForm[]; storage: string[]; skills: { id: string; label: string }[] }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: { 'content-type': 'application/json', authorization: `Bearer ${getToken() ?? ''}`, ...(init?.headers ?? {}) } });
+  const res = await fetch(`${webConfig().apiBase}${path}`, { ...init, headers: { 'content-type': 'application/json', authorization: `Bearer ${getToken() ?? ''}`, ...(init?.headers ?? {}) } });
   if (!res.ok) throw new Error((await res.json().then((b) => (b as { error?: string }).error).catch(() => '')) || `请求失败 ${res.status}`);
   return (await res.json()) as T;
 }
@@ -71,11 +71,11 @@ export function PluginPanel() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (DATA_MODE !== 'api') return;
+    if (webConfig().mode !== 'api') return;
     api<PluginSummary[]>('/plugins').then(setPlugins).catch((e) => setErr((e as Error).message));
   }, []);
 
-  if (DATA_MODE !== 'api') {
+  if (webConfig().mode !== 'api') {
     return (
       <Card className="p-5" >
         <div data-testid="plugins-panel">

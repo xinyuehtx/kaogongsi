@@ -55,7 +55,7 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |
 | `apps/web` | Tailwind UI：登录/角色门禁/管理台 + 项目/版本报告/对比 + api·local 双数据源 + Pages 站点 + 插件面板 | ✅ |
 | `@tengxiaohtx/plugin-core` | 全链路插件宿主：L1-L6 跨层贡献 + UI DSL + NoSQL/Redis 存储端口（RFC-007） | ✅ |
-| `@tengxiaohtx/plugin-example` · `@tengxiaohtx/plugin-aisdk` | 跨层示例插件 · Vercel AI SDK LLM Provider | ✅ |
+| `@tengxiaohtx/plugin-example` · `@tengxiaohtx/aisdk` | 跨层示例插件 · Vercel AI SDK LLM Provider | ✅ |
 | `e2e` | Playwright；exec(5) + compare(4) + auth-rbac(5) 共 14 场景 | ✅ |
 
 **六层全部落地**。**待深化**：L1 真实连接器（BI/Langfuse/Inspect `.eval`）；L3 真实成本/延迟分布、分层指标、pass^k 多 run 估计；L2 大 payload 外置 + 跨 run baggage 关联；反事实验证（REFLECT）。
