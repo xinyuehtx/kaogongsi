@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
+import { computeEvaluation } from '@tengxiaohtx/metrics';
 import { FileSource } from './sources.js';
 import { createIngestConnector } from './connector.js';
 

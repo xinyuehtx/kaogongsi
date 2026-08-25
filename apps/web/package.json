@@ -15,9 +15,9 @@
     "@tengxiaohtx/contracts": "workspace:*",
     "@tengxiaohtx/auth-core": "workspace:*",
     "@tengxiaohtx/connector-mock": "workspace:*",
-    "@tengxiaohtx/l3-metrics": "workspace:*",
-    "@tengxiaohtx/l6-report": "workspace:*",
-    "@tengxiaohtx/l6-compare": "workspace:*",
+    "@tengxiaohtx/metrics": "workspace:*",
+    "@tengxiaohtx/report": "workspace:*",
+    "@tengxiaohtx/compare": "workspace:*",
     "@tengxiaohtx/report-llm": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

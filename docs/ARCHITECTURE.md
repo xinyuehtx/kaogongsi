@@ -33,12 +33,12 @@ L1 接入/适配   packages/connector-mock（内置 fixture）· packages/ingest
 | `@tengxiaohtx/contracts` | 五道契约缝 + KPI 目录 + 指标目录 METRIC_CATALOG + 项目/版本 + 信号/血缘/对比 + `DataConnector`/`ReportGenerator` 端口 | ✅ |
 | `@tengxiaohtx/connector-mock` | `MockConnector`（多项目/多版本；只吐 CanonicalSignal 信号）+ 可复用连接器契约测试 | ✅ |
 | `@tengxiaohtx/ingest` | 真实轨迹接入：File/HTTP 源（分批/时间/tag/header）+ 12 种解析器插件 + IngestConnector（RFC-006） | ✅ |
-| `@tengxiaohtx/l2-provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
-| `@tengxiaohtx/l3-metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
-| `@tengxiaohtx/l4-attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
-| `@tengxiaohtx/l5-decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
-| `@tengxiaohtx/l6-report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
-| `@tengxiaohtx/l6-compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
+| `@tengxiaohtx/provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
+| `@tengxiaohtx/metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
+| `@tengxiaohtx/attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
+| `@tengxiaohtx/decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
+| `@tengxiaohtx/report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
+| `@tengxiaohtx/compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
 | `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
 | `@tengxiaohtx/auth-core` | 账号/角色/项目授权 + StoragePort（内存/文件）+ JWT/scrypt + RBAC（RFC-005） | ✅ |
 | `apps/api` | Fastify；认证 + RBAC 守卫 + 管理端 + 六层报告管道（tsx 运行，存储/密钥注入） | ✅ |

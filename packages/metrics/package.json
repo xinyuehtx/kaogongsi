@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/l2-provenance",
+  "name": "@tengxiaohtx/metrics",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,11 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint: l2-provenance (placeholder)'"
+    "lint": "echo 'lint: l3-metrics (placeholder)'"
   },
   "dependencies": {
-    "@tengxiaohtx/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/provenance": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

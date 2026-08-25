@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/l4-attribution",
+  "name": "@tengxiaohtx/report",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,12 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint: l4-attribution (placeholder)'"
+    "lint": "echo 'lint: l6-report (placeholder)'"
   },
   "dependencies": {
-    "@tengxiaohtx/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/attribution": "workspace:*",
+    "@tengxiaohtx/decision": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

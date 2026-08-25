@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/l6-compare",
+  "name": "@tengxiaohtx/attribution",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint: l6-compare (placeholder)'"
+    "lint": "echo 'lint: l4-attribution (placeholder)'"
   },
   "dependencies": {
     "@tengxiaohtx/contracts": "workspace:*"

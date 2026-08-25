@@ -1,7 +1,7 @@
 import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
-import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
-import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
-import { buildComparison } from '@tengxiaohtx/l6-compare';
+import { computeEvaluation } from '@tengxiaohtx/metrics';
+import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/report';
+import { buildComparison } from '@tengxiaohtx/compare';
 import { TemplateReportGenerator } from '@tengxiaohtx/report-llm';
 import { getConnector } from './connectors.js';
 

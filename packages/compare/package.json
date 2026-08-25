@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/l5-decision",
+  "name": "@tengxiaohtx/compare",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint: l5-decision (placeholder)'"
+    "lint": "echo 'lint: l6-compare (placeholder)'"
   },
   "dependencies": {
     "@tengxiaohtx/contracts": "workspace:*"

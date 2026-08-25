@@ -1,5 +1,5 @@
 {
-  "name": "@tengxiaohtx/l6-report",
+  "name": "@tengxiaohtx/provenance",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,12 +10,10 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo 'lint: l6-report (placeholder)'"
+    "lint": "echo 'lint: l2-provenance (placeholder)'"
   },
   "dependencies": {
-    "@tengxiaohtx/contracts": "workspace:*",
-    "@tengxiaohtx/l4-attribution": "workspace:*",
-    "@tengxiaohtx/l5-decision": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

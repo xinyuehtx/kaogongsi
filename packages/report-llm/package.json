@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@tengxiaohtx/contracts": "workspace:*",
-    "@tengxiaohtx/l6-compare": "workspace:*"
+    "@tengxiaohtx/compare": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

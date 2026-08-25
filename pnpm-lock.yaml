@@ -23,6 +23,9 @@ importers:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
         version: link:../../packages/auth-core
+      '@tengxiaohtx/compare':
+        specifier: workspace:*
+        version: link:../../packages/compare
       '@tengxiaohtx/connector-mock':
         specifier: workspace:*
         version: link:../../packages/connector-mock
@@ -32,21 +35,18 @@ importers:
       '@tengxiaohtx/ingest':
         specifier: workspace:*
         version: link:../../packages/ingest
-      '@tengxiaohtx/l3-metrics':
+      '@tengxiaohtx/metrics':
         specifier: workspace:*
-        version: link:../../packages/l3-metrics
-      '@tengxiaohtx/l6-compare':
-        specifier: workspace:*
-        version: link:../../packages/l6-compare
-      '@tengxiaohtx/l6-report':
-        specifier: workspace:*
-        version: link:../../packages/l6-report
+        version: link:../../packages/metrics
       '@tengxiaohtx/plugin-core':
         specifier: workspace:*
         version: link:../../packages/plugin-core
       '@tengxiaohtx/plugin-example':
         specifier: workspace:*
-        version: link:../../packages/plugin-example
+        version: link:../../plugins/example
+      '@tengxiaohtx/report':
+        specifier: workspace:*
+        version: link:../../packages/report
       '@tengxiaohtx/report-llm':
         specifier: workspace:*
         version: link:../../packages/report-llm
@@ -72,21 +72,21 @@ importers:
       '@tengxiaohtx/auth-core':
         specifier: workspace:*
         version: link:../../packages/auth-core
+      '@tengxiaohtx/compare':
+        specifier: workspace:*
+        version: link:../../packages/compare
       '@tengxiaohtx/connector-mock':
         specifier: workspace:*
         version: link:../../packages/connector-mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tengxiaohtx/l3-metrics':
+      '@tengxiaohtx/metrics':
         specifier: workspace:*
-        version: link:../../packages/l3-metrics
-      '@tengxiaohtx/l6-compare':
+        version: link:../../packages/metrics
+      '@tengxiaohtx/report':
         specifier: workspace:*
-        version: link:../../packages/l6-compare
-      '@tengxiaohtx/l6-report':
-        specifier: workspace:*
-        version: link:../../packages/l6-report
+        version: link:../../packages/report
       '@tengxiaohtx/report-llm':
         specifier: workspace:*
         version: link:../../packages/report-llm
@@ -128,6 +128,19 @@ importers:
         specifier: ^1.50.0
         version: 1.62.1
 
+  packages/attribution:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
   packages/auth-core:
     dependencies:
       '@tengxiaohtx/contracts':
@@ -137,6 +150,19 @@ importers:
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  packages/compare:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -166,15 +192,28 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
+  packages/decision:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
   packages/ingest:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
-      '@tengxiaohtx/l3-metrics':
+      '@tengxiaohtx/metrics':
         specifier: workspace:*
-        version: link:../l3-metrics
+        version: link:../metrics
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1
@@ -185,104 +224,14 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/l2-provenance:
+  packages/metrics:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/l3-metrics:
-    dependencies:
-      '@tengxiaohtx/contracts':
+      '@tengxiaohtx/provenance':
         specifier: workspace:*
-        version: link:../contracts
-      '@tengxiaohtx/l2-provenance':
-        specifier: workspace:*
-        version: link:../l2-provenance
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/l4-attribution:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/l5-decision:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/l6-compare:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/l6-report:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@tengxiaohtx/l4-attribution':
-        specifier: workspace:*
-        version: link:../l4-attribution
-      '@tengxiaohtx/l5-decision':
-        specifier: workspace:*
-        version: link:../l5-decision
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  packages/plugin-aisdk:
-    dependencies:
-      '@tengxiaohtx/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../plugin-core
-      ai:
-        specifier: ^4.0.0
-        version: 4.3.19(react@19.2.8)(zod@3.25.76)
+        version: link:../provenance
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -307,17 +256,30 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
 
-  packages/plugin-example:
+  packages/provenance:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tengxiaohtx/ingest':
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  packages/report:
+    dependencies:
+      '@tengxiaohtx/attribution':
         specifier: workspace:*
-        version: link:../ingest
-      '@tengxiaohtx/plugin-core':
+        version: link:../attribution
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../plugin-core
+        version: link:../contracts
+      '@tengxiaohtx/decision':
+        specifier: workspace:*
+        version: link:../decision
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -328,12 +290,50 @@ importers:
 
   packages/report-llm:
     dependencies:
+      '@tengxiaohtx/compare':
+        specifier: workspace:*
+        version: link:../compare
       '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tengxiaohtx/l6-compare':
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  plugins/aisdk:
+    dependencies:
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../l6-compare
+        version: link:../../packages/contracts
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../packages/plugin-core
+      ai:
+        specifier: ^4.0.0
+        version: 4.3.19(react@19.2.8)(zod@3.25.76)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  plugins/example:
+    dependencies:
+      '@tengxiaohtx/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tengxiaohtx/ingest':
+        specifier: workspace:*
+        version: link:../../packages/ingest
+      '@tengxiaohtx/plugin-core':
+        specifier: workspace:*
+        version: link:../../packages/plugin-core
     devDependencies:
       typescript:
         specifier: ^5.7.0

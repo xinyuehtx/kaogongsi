@@ -7,8 +7,8 @@ import type {
   VersionEvaluation,
   VersionReport,
 } from '@tengxiaohtx/contracts';
-import { buildAttribution } from '@tengxiaohtx/l4-attribution';
-import { decide } from '@tengxiaohtx/l5-decision';
+import { buildAttribution } from '@tengxiaohtx/attribution';
+import { decide } from '@tengxiaohtx/decision';
 
 /**
  * 组合管道（RFC-003）：原始证据 → 归因(L4) → 决策(L5) → VersionReport。

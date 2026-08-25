@@ -1,9 +1,9 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type { DataConnector, ReportGenerator } from '@tengxiaohtx/contracts';
 import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
-import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
-import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
-import { buildComparison } from '@tengxiaohtx/l6-compare';
+import { computeEvaluation } from '@tengxiaohtx/metrics';
+import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/report';
+import { buildComparison } from '@tengxiaohtx/compare';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { FileSource, HttpSource, createIngestConnector, createRegistry } from '@tengxiaohtx/ingest';
 import { createReportGenerator } from '@tengxiaohtx/report-llm';

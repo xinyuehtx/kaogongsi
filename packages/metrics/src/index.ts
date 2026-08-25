@@ -10,7 +10,7 @@ import type {
   VersionSummary,
 } from '@tengxiaohtx/contracts';
 import { METRIC_CATALOG, isTrajectoryGroup } from '@tengxiaohtx/contracts';
-import { buildProvenance } from '@tengxiaohtx/l2-provenance';
+import { buildProvenance } from '@tengxiaohtx/provenance';
 
 /**
  * L3 计算层：从血缘图(L2)的案例聚合出**可信指标**（值 + 样本量 + bootstrap 置信，A4/P1），

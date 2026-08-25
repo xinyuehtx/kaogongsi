@@ -57,12 +57,12 @@ pnpm e2e              # Playwright 端到端
 
 # 单层独立测试（验证隔离）
 pnpm --filter @tengxiaohtx/contracts test
-pnpm --filter @tengxiaohtx/l2-provenance test
-pnpm --filter @tengxiaohtx/l3-metrics test
-pnpm --filter @tengxiaohtx/l4-attribution test
-pnpm --filter @tengxiaohtx/l5-decision test
-pnpm --filter @tengxiaohtx/l6-report test
-pnpm --filter @tengxiaohtx/l6-compare test
+pnpm --filter @tengxiaohtx/provenance test
+pnpm --filter @tengxiaohtx/metrics test
+pnpm --filter @tengxiaohtx/attribution test
+pnpm --filter @tengxiaohtx/decision test
+pnpm --filter @tengxiaohtx/report test
+pnpm --filter @tengxiaohtx/compare test
 pnpm --filter @tengxiaohtx/report-llm test
 pnpm --filter @tengxiaohtx/connector-mock test
 pnpm --filter @tengxiaohtx/api test

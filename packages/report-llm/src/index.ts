@@ -8,7 +8,7 @@ import type {
   ReportGenerator,
   SkillTemplate,
 } from '@tengxiaohtx/contracts';
-import { summarizeComparison } from '@tengxiaohtx/l6-compare';
+import { summarizeComparison } from '@tengxiaohtx/compare';
 
 // ─────────────────────────────────────────────────────────────
 // 对比报告生成 —— ReportGenerator 端口（D3 ModelGateway 落地）
