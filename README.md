@@ -29,7 +29,7 @@
 
 ## 架构：六层 + 五契约（层间隔离）
 
-每层是独立包，只依赖下层的**稳定契约**（`@kaogongsi/contracts`），可独立测试、独立存活。换实现不换契约、上层无感。
+每层是独立包，只依赖下层的**稳定契约**（`@tengxiaohtx/contracts`），可独立测试、独立存活。换实现不换契约、上层无感。
 
 | 层 | 包 | 契约（上缘） |
 |---|---|---|
@@ -59,8 +59,8 @@ pnpm typecheck
 pnpm build           # turbo 构建全部
 pnpm e2e             # Playwright E2E（自动 build+preview web）
 
-pnpm --filter @kaogongsi/api dev     # 起后端 :3001
-pnpm --filter @kaogongsi/web dev     # 起前端 :5173
+pnpm --filter @tengxiaohtx/api dev     # 起后端 :3001
+pnpm --filter @tengxiaohtx/web dev     # 起前端 :5173
 ```
 
 打开 `http://localhost:5173`：顶栏选**项目**，切「单版本报告 / 双版本对比」；对比模式下选**基线**与**候选**版本，点「生成对比报告」。深浅色可切。

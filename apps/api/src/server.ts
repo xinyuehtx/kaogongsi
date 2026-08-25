@@ -1,10 +1,10 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { DataConnector, ReportGenerator } from '@kaogongsi/contracts';
-import { computeEvaluation } from '@kaogongsi/l3-metrics';
-import { assembleVersionReport, buildExecReportView } from '@kaogongsi/l6-report';
-import { buildComparison } from '@kaogongsi/l6-compare';
-import { MockConnector } from '@kaogongsi/connector-mock';
-import { createReportGenerator } from '@kaogongsi/report-llm';
+import type { DataConnector, ReportGenerator } from '@tengxiaohtx/contracts';
+import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
+import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
+import { buildComparison } from '@tengxiaohtx/l6-compare';
+import { MockConnector } from '@tengxiaohtx/connector-mock';
+import { createReportGenerator } from '@tengxiaohtx/report-llm';
 
 export interface ServerDeps {
   /** 注入连接器——换实现即换数据源（D9.2 / AC-7）。默认 MockConnector。 */

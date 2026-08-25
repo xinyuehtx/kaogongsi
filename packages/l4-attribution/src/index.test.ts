@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { EvidenceLevel, MetricCaseBundle, VersionEvaluation, VersionSummary } from '@kaogongsi/contracts';
+import type { EvidenceLevel, MetricCaseBundle, VersionEvaluation, VersionSummary } from '@tengxiaohtx/contracts';
 import { buildAttribution } from './index.js';
 
 const ver = (evidenceLevel: EvidenceLevel = 'full'): VersionSummary => ({

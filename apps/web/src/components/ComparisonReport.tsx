@@ -1,4 +1,4 @@
-import type { ComparisonGroup, ComparisonView, MetricDelta } from '@kaogongsi/contracts';
+import type { ComparisonGroup, ComparisonView, MetricDelta } from '@tengxiaohtx/contracts';
 import { useState } from 'react';
 import { Card, DirectionChip, GateBadge, MiniBars, SectionTitle } from './ui.js';
 

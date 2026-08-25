@@ -29,7 +29,7 @@ Choose: single-version report  OR  pick two versions to compare
 
 ## Architecture: 6 layers + 5 contracts (layer isolation)
 
-Every layer is an independent package depending only on the **stable contracts** below (`@kaogongsi/contracts`) — independently testable, independently alive. Swap an implementation without touching the contract; upper layers are unaffected.
+Every layer is an independent package depending only on the **stable contracts** below (`@tengxiaohtx/contracts`) — independently testable, independently alive. Swap an implementation without touching the contract; upper layers are unaffected.
 
 | Layer | Package | Upper-edge contract |
 |---|---|---|
@@ -67,8 +67,8 @@ pnpm typecheck
 pnpm build
 pnpm e2e             # Playwright E2E (auto build + preview web)
 
-pnpm --filter @kaogongsi/api dev     # backend :3001
-pnpm --filter @kaogongsi/web dev     # frontend :5173
+pnpm --filter @tengxiaohtx/api dev     # backend :3001
+pnpm --filter @tengxiaohtx/web dev     # frontend :5173
 ```
 
 Open `http://localhost:5173`: pick a **project** in the top bar, toggle **single-version / two-version compare**; in compare mode pick **baseline** and **candidate**, then click **Generate comparison report**. Light/dark toggle included.

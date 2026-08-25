@@ -94,7 +94,7 @@ interface ReportGenerator { id; generate(input): Promise<ComparativeNarrative> }
 | AC-9 | Playwright E2E：单版本/对比/生成报告/回退检出/项目切换无残留 全绿 | UI 硬要求 |
 
 ## 5. 交付物
-- `@kaogongsi/contracts` 扩展类型
+- `@tengxiaohtx/contracts` 扩展类型
 - `packages/l6-compare/`、`packages/report-llm/`（含单测）
 - `packages/connector-mock/` 多项目版本 fixture + 契约测试增补
 - `apps/api` 新路由 + inject 测试

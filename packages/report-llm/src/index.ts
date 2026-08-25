@@ -5,8 +5,8 @@ import type {
   GenerateComparisonInput,
   MetricDelta,
   ReportGenerator,
-} from '@kaogongsi/contracts';
-import { summarizeComparison } from '@kaogongsi/l6-compare';
+} from '@tengxiaohtx/contracts';
+import { summarizeComparison } from '@tengxiaohtx/l6-compare';
 
 // ─────────────────────────────────────────────────────────────
 // 对比报告生成 —— ReportGenerator 端口（D3 ModelGateway 落地）

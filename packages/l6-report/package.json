@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/l6-report",
+  "name": "@tengxiaohtx/l6-report",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,9 +13,9 @@
     "lint": "echo 'lint: l6-report (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*",
-    "@kaogongsi/l4-attribution": "workspace:*",
-    "@kaogongsi/l5-decision": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/l4-attribution": "workspace:*",
+    "@tengxiaohtx/l5-decision": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

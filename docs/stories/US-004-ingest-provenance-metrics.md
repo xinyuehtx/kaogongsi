@@ -42,6 +42,6 @@
 - 成本/延迟的真实分布、pass^k 多 run 估计、分层指标
 
 ## 演示脚本
-1. `pnpm --filter @kaogongsi/l3-metrics test`：看 bootstrap 置信区间、pass^k、Cost-of-Pass 计算。
-2. `pnpm --filter @kaogongsi/web dev`：dt-sheet v2.0 成功率 72%（=72/100 通过信号聚合）；fs-doc v1.0 幻觉率破线 → NO-GO。
+1. `pnpm --filter @tengxiaohtx/l3-metrics test`：看 bootstrap 置信区间、pass^k、Cost-of-Pass 计算。
+2. `pnpm --filter @tengxiaohtx/web dev`：dt-sheet v2.0 成功率 72%（=72/100 通过信号聚合）；fs-doc v1.0 幻觉率破线 → NO-GO。
 3. `pnpm e2e` 全绿（证明换成六层管道后 UI 零回归）。

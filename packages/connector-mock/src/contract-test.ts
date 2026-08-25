@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { DataConnector } from '@kaogongsi/contracts';
+import type { DataConnector } from '@tengxiaohtx/contracts';
 
 /**
  * 可复用的连接器契约测试（RFC-001 AC-8）。

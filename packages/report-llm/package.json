@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/report-llm",
+  "name": "@tengxiaohtx/report-llm",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "lint": "echo 'lint: report-llm (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*",
-    "@kaogongsi/l6-compare": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/l6-compare": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { ComparisonView, DataConnector, ProjectSummary, ReportView, VersionSummary } from '@kaogongsi/contracts';
-import { MockConnector } from '@kaogongsi/connector-mock';
+import type { ComparisonView, DataConnector, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
+import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { buildServer } from './server.js';
 
 describe('api: 独立测试闭环（inject，无需起端口）', () => {

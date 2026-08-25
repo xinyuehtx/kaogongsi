@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { AttributionResult, Kpi, KpiSet } from '@kaogongsi/contracts';
+import type { AttributionResult, Kpi, KpiSet } from '@tengxiaohtx/contracts';
 import { decide } from './index.js';
 
 const attribution = (confidence: AttributionResult['confidence'] = 'medium'): AttributionResult => ({

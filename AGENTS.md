@@ -8,11 +8,11 @@
 **考功司** —— 借古喻今：考功司为古代**户部下属、专司官员绩效考评**之部门；本项目是一台面向 **Agent 的「评测归因决策机」**：
 输入各类 Agent 的评测/线上信号 → 按指标×权重计算 → 归因到**技术/产品/运营** → 对上给「值不值得继续（GO/NO-GO/ABSTAIN）+ 顶层归因」，对下给「按责任方路由的排查建议」。**全程决策支持、人工拍板。**
 
-> 显示名统一用「**考功司**」（不是「考公司」）。包名沿用拼音 `@kaogongsi/*`。
+> 显示名统一用「**考功司**」（不是「考公司」）。包名沿用拼音 `@tengxiaohtx/*`。
 
 ## 1. 架构：六层 + 五契约（层间隔离）
 
-每层是**独立包**，只依赖下层的**稳定契约**（`@kaogongsi/contracts`），可独立测试、独立存活。换实现不换契约、上层无感（D9.2 / A6 / D3）。
+每层是**独立包**，只依赖下层的**稳定契约**（`@tengxiaohtx/contracts`），可独立测试、独立存活。换实现不换契约、上层无感（D9.2 / A6 / D3）。
 
 | 层 | 包 | 上缘契约 |
 |---|---|---|
@@ -45,7 +45,7 @@
 
 1. 写 `docs/rfcs/RFC-00X-*.md` + `docs/stories/US-00X-*.md`（用户故事 Given/When/Then + 验收标准）。
 2. **逐层 TDD**：先写失败测试 → 实现 → 绿。每包 `pnpm --filter <pkg> test` 独立可绿、互不依赖运行时。
-3. **连接器新实现**必须跑通用契约测试 `runConnectorContract`（`@kaogongsi/connector-mock`）——这是「可替换」的守卫。
+3. **连接器新实现**必须跑通用契约测试 `runConnectorContract`（`@tengxiaohtx/connector-mock`）——这是「可替换」的守卫。
 4. UI 侧加 Playwright E2E 到 `e2e/tests/`；**保持既有 spec 全绿**（改 UI 时保留 `data-testid`）。
 5. 全绿后：RFC/Story 标完成，更新 `docs/ARCHITECTURE.md`(L2) 与 `docs/MANUAL.md`(L2)。
 6. **按 feature 提交**（每个绿色增量一个 commit）；commit message 说明层与契约变更。
@@ -59,12 +59,12 @@ pnpm typecheck   # 全部类型检查
 pnpm build       # 全部构建
 pnpm e2e         # Playwright 端到端（自动 build+preview web）
 
-pnpm --filter @kaogongsi/<pkg> test   # 单层独立测试（验证隔离）
-pnpm --filter @kaogongsi/api dev      # 后端 :3001
-pnpm --filter @kaogongsi/web dev      # 前端 :5173
+pnpm --filter @tengxiaohtx/<pkg> test   # 单层独立测试（验证隔离）
+pnpm --filter @tengxiaohtx/api dev      # 后端 :3001
+pnpm --filter @tengxiaohtx/web dev      # 前端 :5173
 ```
 
-首次装 E2E 浏览器：`pnpm --filter @kaogongsi/e2e exec playwright install chromium`。
+首次装 E2E 浏览器：`pnpm --filter @tengxiaohtx/e2e exec playwright install chromium`。
 
 ## 5. 代码风格
 

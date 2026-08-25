@@ -6,9 +6,9 @@ import type {
   TrajectoryKpis,
   VersionEvaluation,
   VersionReport,
-} from '@kaogongsi/contracts';
-import { buildAttribution } from '@kaogongsi/l4-attribution';
-import { decide } from '@kaogongsi/l5-decision';
+} from '@tengxiaohtx/contracts';
+import { buildAttribution } from '@tengxiaohtx/l4-attribution';
+import { decide } from '@tengxiaohtx/l5-decision';
 
 /**
  * 组合管道（RFC-003）：原始证据 → 归因(L4) → 决策(L5) → VersionReport。

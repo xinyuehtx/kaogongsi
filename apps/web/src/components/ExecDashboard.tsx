@@ -1,4 +1,4 @@
-import type { Kpi, ReportView } from '@kaogongsi/contracts';
+import type { Kpi, ReportView } from '@tengxiaohtx/contracts';
 import { useState } from 'react';
 import { AttributionBar, Card, GateBadge, SectionTitle } from './ui.js';
 

@@ -20,22 +20,22 @@ importers:
 
   apps/api:
     dependencies:
-      '@kaogongsi/connector-mock':
+      '@tengxiaohtx/connector-mock':
         specifier: workspace:*
         version: link:../../packages/connector-mock
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@kaogongsi/l3-metrics':
+      '@tengxiaohtx/l3-metrics':
         specifier: workspace:*
         version: link:../../packages/l3-metrics
-      '@kaogongsi/l6-compare':
+      '@tengxiaohtx/l6-compare':
         specifier: workspace:*
         version: link:../../packages/l6-compare
-      '@kaogongsi/l6-report':
+      '@tengxiaohtx/l6-report':
         specifier: workspace:*
         version: link:../../packages/l6-report
-      '@kaogongsi/report-llm':
+      '@tengxiaohtx/report-llm':
         specifier: workspace:*
         version: link:../../packages/report-llm
       fastify:
@@ -54,22 +54,22 @@ importers:
 
   apps/web:
     dependencies:
-      '@kaogongsi/connector-mock':
+      '@tengxiaohtx/connector-mock':
         specifier: workspace:*
         version: link:../../packages/connector-mock
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@kaogongsi/l3-metrics':
+      '@tengxiaohtx/l3-metrics':
         specifier: workspace:*
         version: link:../../packages/l3-metrics
-      '@kaogongsi/l6-compare':
+      '@tengxiaohtx/l6-compare':
         specifier: workspace:*
         version: link:../../packages/l6-compare
-      '@kaogongsi/l6-report':
+      '@tengxiaohtx/l6-report':
         specifier: workspace:*
         version: link:../../packages/l6-report
-      '@kaogongsi/report-llm':
+      '@tengxiaohtx/report-llm':
         specifier: workspace:*
         version: link:../../packages/report-llm
       react:
@@ -112,7 +112,7 @@ importers:
 
   packages/connector-mock:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -134,7 +134,7 @@ importers:
 
   packages/l2-provenance:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -147,10 +147,10 @@ importers:
 
   packages/l3-metrics:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@kaogongsi/l2-provenance':
+      '@tengxiaohtx/l2-provenance':
         specifier: workspace:*
         version: link:../l2-provenance
     devDependencies:
@@ -163,7 +163,7 @@ importers:
 
   packages/l4-attribution:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -176,7 +176,7 @@ importers:
 
   packages/l5-decision:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -189,7 +189,7 @@ importers:
 
   packages/l6-compare:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
     devDependencies:
@@ -202,13 +202,13 @@ importers:
 
   packages/l6-report:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@kaogongsi/l4-attribution':
+      '@tengxiaohtx/l4-attribution':
         specifier: workspace:*
         version: link:../l4-attribution
-      '@kaogongsi/l5-decision':
+      '@tengxiaohtx/l5-decision':
         specifier: workspace:*
         version: link:../l5-decision
     devDependencies:
@@ -221,10 +221,10 @@ importers:
 
   packages/report-llm:
     dependencies:
-      '@kaogongsi/contracts':
+      '@tengxiaohtx/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@kaogongsi/l6-compare':
+      '@tengxiaohtx/l6-compare':
         specifier: workspace:*
         version: link:../l6-compare
     devDependencies:

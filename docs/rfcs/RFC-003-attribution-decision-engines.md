@@ -59,7 +59,7 @@ RFC-001/002 里 `MockConnector` **直接吐一份烤好的 `DecisionRecord`（�
 | AC-6 | 各包独立可测；l4/l5 纯函数无 IO | 层独立存活 |
 
 ## 5. 交付物
-- `@kaogongsi/contracts`：`VersionEvaluation` + `DataConnector.fetchEvaluation`
+- `@tengxiaohtx/contracts`：`VersionEvaluation` + `DataConnector.fetchEvaluation`
 - `packages/l4-attribution/`、`packages/l5-decision/`（含单测）
 - `packages/l6-report`：`assembleVersionReport`
 - `connector-mock`：证据合成 + 契约测试更新

@@ -5,7 +5,7 @@ import type {
   Kpi,
   KpiSet,
   ResponsibleParty,
-} from '@kaogongsi/contracts';
+} from '@tengxiaohtx/contracts';
 
 /**
  * L5 决策引擎：把「归因(L4) + 指标 + 护栏」按门禁政策折算成 DecisionRecord。

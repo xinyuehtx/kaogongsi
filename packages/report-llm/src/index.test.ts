@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { DecisionRecord, Kpi, KpiSet, ProjectSummary, VersionReport, VersionSummary } from '@kaogongsi/contracts';
-import { buildComparison } from '@kaogongsi/l6-compare';
+import type { DecisionRecord, Kpi, KpiSet, ProjectSummary, VersionReport, VersionSummary } from '@tengxiaohtx/contracts';
+import { buildComparison } from '@tengxiaohtx/l6-compare';
 import {
   OpenAiCompatibleReportGenerator,
   TemplateReportGenerator,

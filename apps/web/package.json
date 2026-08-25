@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/web",
+  "name": "@tengxiaohtx/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,12 +12,12 @@
     "lint": "echo 'lint: web (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*",
-    "@kaogongsi/connector-mock": "workspace:*",
-    "@kaogongsi/l3-metrics": "workspace:*",
-    "@kaogongsi/l6-report": "workspace:*",
-    "@kaogongsi/l6-compare": "workspace:*",
-    "@kaogongsi/report-llm": "workspace:*",
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/connector-mock": "workspace:*",
+    "@tengxiaohtx/l3-metrics": "workspace:*",
+    "@tengxiaohtx/l6-report": "workspace:*",
+    "@tengxiaohtx/l6-compare": "workspace:*",
+    "@tengxiaohtx/report-llm": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

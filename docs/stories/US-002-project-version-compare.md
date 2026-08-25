@@ -51,7 +51,7 @@
 - 前端直连真实 LLM（key 只在服务端）
 
 ## 演示脚本
-1. `pnpm --filter @kaogongsi/web dev` → 选「钉钉 AI 表格 Agent」，看 v2.0 单版本报告（GO）。
+1. `pnpm --filter @tengxiaohtx/web dev` → 选「钉钉 AI 表格 Agent」，看 v2.0 单版本报告（GO）。
 2. 切「双版本对比」，基线 v1.0 / 候选 v2.0 → 看逐指标改善 + 显著性；点「生成对比报告」→ verdict GO。
 3. 选「飞书文档助手 Agent」（v0.9→v1.0）→ 幻觉率破线标红、门禁 → NO-GO；生成报告 verdict NO-GO、建议暂停放量。
 4. `pnpm e2e` 全绿。

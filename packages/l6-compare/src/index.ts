@@ -7,7 +7,7 @@ import type {
   MetricDelta,
   ProjectSummary,
   VersionReport,
-} from '@kaogongsi/contracts';
+} from '@tengxiaohtx/contracts';
 
 /**
  * L6：把两个版本的评测结果算成 ComparisonView（逐指标 delta + 方向 + 显著性）。

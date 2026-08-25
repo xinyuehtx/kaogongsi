@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/l6-compare",
+  "name": "@tengxiaohtx/l6-compare",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "echo 'lint: l6-compare (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

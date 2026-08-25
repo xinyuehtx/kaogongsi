@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/l3-metrics",
+  "name": "@tengxiaohtx/l3-metrics",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "lint": "echo 'lint: l3-metrics (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*",
-    "@kaogongsi/l2-provenance": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*",
+    "@tengxiaohtx/l2-provenance": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

@@ -1,8 +1,8 @@
-import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@kaogongsi/contracts';
-import { computeEvaluation } from '@kaogongsi/l3-metrics';
-import { assembleVersionReport, buildExecReportView } from '@kaogongsi/l6-report';
-import { buildComparison } from '@kaogongsi/l6-compare';
-import { TemplateReportGenerator } from '@kaogongsi/report-llm';
+import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
+import { computeEvaluation } from '@tengxiaohtx/l3-metrics';
+import { assembleVersionReport, buildExecReportView } from '@tengxiaohtx/l6-report';
+import { buildComparison } from '@tengxiaohtx/l6-compare';
+import { TemplateReportGenerator } from '@tengxiaohtx/report-llm';
 import { getConnector } from './connectors.js';
 
 /**

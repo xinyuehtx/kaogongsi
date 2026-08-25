@@ -5,7 +5,7 @@
 
 ## 1. 六层 + 五契约（层间隔离）
 
-每层是独立包，**只依赖下层的稳定契约**（`@kaogongsi/contracts`），可独立测试、独立存活。契约缝 = 换实现不换契约、上层无感（D9.2 / A6 / D3）。
+每层是独立包，**只依赖下层的稳定契约**（`@tengxiaohtx/contracts`），可独立测试、独立存活。契约缝 = 换实现不换契约、上层无感（D9.2 / A6 / D3）。
 
 ```
 L6 呈现/路由   apps/web (AppShell/ExecDashboard/ComparisonReport)
@@ -29,15 +29,15 @@ L1 接入/适配   packages/connector-mock（只吐 CanonicalSignal）+ 未来 B
 
 | 包 | 角色 | 状态 |
 |---|---|---|
-| `@kaogongsi/contracts` | 五道契约缝 + KPI 目录 + 指标目录 METRIC_CATALOG + 项目/版本 + 信号/血缘/对比 + `DataConnector`/`ReportGenerator` 端口 | ✅ |
-| `@kaogongsi/connector-mock` | `MockConnector`（多项目/多版本；只吐 CanonicalSignal 信号）+ 可复用连接器契约测试 | ✅ |
-| `@kaogongsi/l2-provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
-| `@kaogongsi/l3-metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
-| `@kaogongsi/l4-attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
-| `@kaogongsi/l5-decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
-| `@kaogongsi/l6-report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
-| `@kaogongsi/l6-compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
-| `@kaogongsi/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
+| `@tengxiaohtx/contracts` | 五道契约缝 + KPI 目录 + 指标目录 METRIC_CATALOG + 项目/版本 + 信号/血缘/对比 + `DataConnector`/`ReportGenerator` 端口 | ✅ |
+| `@tengxiaohtx/connector-mock` | `MockConnector`（多项目/多版本；只吐 CanonicalSignal 信号）+ 可复用连接器契约测试 | ✅ |
+| `@tengxiaohtx/l2-provenance` | `buildProvenance`：signals → Source→Case→Metric 血缘图 + 投影下钻（契约①） | ✅ |
+| `@tengxiaohtx/l3-metrics` | `computeEvaluation`：血缘 → 可信指标（bootstrap CI/pass^k/Cost-of-Pass）+ bundles | ✅ |
+| `@tengxiaohtx/l4-attribution` | `buildAttribution`：MetricCaseBundle → AttributionResult（案例驱动，铁律） | ✅ |
+| `@tengxiaohtx/l5-decision` | `decide`：AttributionResult+KpiSet → DecisionRecord（门禁政策 + assurance case） | ✅ |
+| `@tengxiaohtx/l6-report` | `buildExecReportView` + `assembleVersionReport`（串 L4→L5） | ✅ |
+| `@tengxiaohtx/l6-compare` | `buildComparison`/`summarizeComparison`：两 VersionReport → ComparisonView | ✅ |
+| `@tengxiaohtx/report-llm` | `ReportGenerator` 端口：Template（离线默认）+ OpenAI 兼容（可选真实）+ 工厂 | ✅ |
 | `apps/api` | Fastify；exec(legacy) / projects / versions / version / compare（走六层管道 + 注入生成器） | ✅ |
 | `apps/web` | Tailwind UI：项目/版本选择 + 单版本报告 + 双版本对比 + 生成对比报告 + 深浅色 | ✅ |
 | `e2e` | Playwright；exec-dashboard(5) + project-version-compare(4) 共 9 场景 | ✅ |

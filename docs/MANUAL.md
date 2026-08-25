@@ -5,7 +5,7 @@
 ## 1. 环境
 
 - Node ≥ 22（开发用 24）、pnpm 10。
-- 首次装 Playwright 浏览器：`pnpm --filter @kaogongsi/e2e exec playwright install chromium`。
+- 首次装 Playwright 浏览器：`pnpm --filter @tengxiaohtx/e2e exec playwright install chromium`。
 
 ## 2. 常用命令
 
@@ -17,20 +17,20 @@ pnpm build            # 全部构建
 pnpm e2e              # Playwright 端到端
 
 # 单层独立测试（验证隔离）
-pnpm --filter @kaogongsi/contracts test
-pnpm --filter @kaogongsi/l2-provenance test
-pnpm --filter @kaogongsi/l3-metrics test
-pnpm --filter @kaogongsi/l4-attribution test
-pnpm --filter @kaogongsi/l5-decision test
-pnpm --filter @kaogongsi/l6-report test
-pnpm --filter @kaogongsi/l6-compare test
-pnpm --filter @kaogongsi/report-llm test
-pnpm --filter @kaogongsi/connector-mock test
-pnpm --filter @kaogongsi/api test
+pnpm --filter @tengxiaohtx/contracts test
+pnpm --filter @tengxiaohtx/l2-provenance test
+pnpm --filter @tengxiaohtx/l3-metrics test
+pnpm --filter @tengxiaohtx/l4-attribution test
+pnpm --filter @tengxiaohtx/l5-decision test
+pnpm --filter @tengxiaohtx/l6-report test
+pnpm --filter @tengxiaohtx/l6-compare test
+pnpm --filter @tengxiaohtx/report-llm test
+pnpm --filter @tengxiaohtx/connector-mock test
+pnpm --filter @tengxiaohtx/api test
 
 # 起服务
-pnpm --filter @kaogongsi/api dev     # 后端 :3001
-pnpm --filter @kaogongsi/web dev     # 前端 :5173
+pnpm --filter @tengxiaohtx/api dev     # 后端 :3001
+pnpm --filter @tengxiaohtx/web dev     # 前端 :5173
 ```
 
 ## 3. 对上高管 Dashboard（单版本报告）
@@ -67,7 +67,7 @@ export KAOGONGSI_LLM_MODEL=gpt-4o-mini
 ## 4. 如何接入一个新数据源（写连接器）
 
 1. 新建包 `packages/connector-xxx`，实现 `DataConnector` 接口（`capabilities/fetchDecision/fetchKpis`）。
-2. 跑通用契约测试：`runConnectorContract('xxx', () => new XxxConnector())`（从 `@kaogongsi/connector-mock` 导入）。
+2. 跑通用契约测试：`runConnectorContract('xxx', () => new XxxConnector())`（从 `@tengxiaohtx/connector-mock` 导入）。
 3. 在 `apps/web/src/connectors.ts` 注册；或在 `apps/api` 注入。
 4. **l6-report 与 web 组件无需改动**——这是连接器模式的目的。
 

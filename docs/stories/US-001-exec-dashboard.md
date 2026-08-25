@@ -63,7 +63,7 @@
 - UI 可视化配置数据源（本故事用前端配置文件）
 
 ## 演示脚本
-1. `pnpm --filter @kaogongsi/web dev` 打开 Dashboard，看到 GO 徽标 + 归因 + 四组 KPI（护栏破线标红）+ 决策依据
+1. `pnpm --filter @tengxiaohtx/web dev` 打开 Dashboard，看到 GO 徽标 + 归因 + 四组 KPI（护栏破线标红）+ 决策依据
 2. 切到 metric-only 连接器 fixture，看到"不可下钻"、按钮禁用
 3. 用"假 L5 连接器"替换 MockConnector，页面结构不变、数据变化（验证可替换）
 4. `pnpm e2e` 四场景全绿

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { DecisionRecord, KpiSet } from '@kaogongsi/contracts';
+import type { DecisionRecord, KpiSet } from '@tengxiaohtx/contracts';
 import { buildExecReportView } from './index.js';
 
 const decision: DecisionRecord = {

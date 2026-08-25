@@ -1,4 +1,4 @@
-import type { CanonicalSignal, ProvenanceCase, ProvenanceQuery } from '@kaogongsi/contracts';
+import type { CanonicalSignal, ProvenanceCase, ProvenanceQuery } from '@tengxiaohtx/contracts';
 
 /**
  * L2 证据/血缘层：把归一化信号（契约⓪）建成 typed provenance 图，并暴露投影查询（契约①）。

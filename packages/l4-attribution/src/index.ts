@@ -4,7 +4,7 @@ import type {
   MetricCaseBundle,
   ResponsibleParty,
   VersionEvaluation,
-} from '@kaogongsi/contracts';
+} from '@tengxiaohtx/contracts';
 
 /**
  * L4 归因引擎：从原始证据（MetricCaseBundle）把结果/问题归因到 技术/产品/运营 三责任方。

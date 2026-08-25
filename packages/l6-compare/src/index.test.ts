@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { DecisionRecord, Kpi, KpiSet, ProjectSummary, VersionReport, VersionSummary } from '@kaogongsi/contracts';
+import type { DecisionRecord, Kpi, KpiSet, ProjectSummary, VersionReport, VersionSummary } from '@tengxiaohtx/contracts';
 import { buildComparison, summarizeComparison } from './index.js';
 
 const project: ProjectSummary = { id: 'p1', name: '项目一', description: '' };

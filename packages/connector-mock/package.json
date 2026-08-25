@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/connector-mock",
+  "name": "@tengxiaohtx/connector-mock",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "echo 'lint: connector-mock (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

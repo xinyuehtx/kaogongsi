@@ -42,7 +42,7 @@
 - 权重/责任方映射的可配置化。
 
 ## 演示脚本
-1. `pnpm --filter @kaogongsi/web dev` → dt-sheet v2.0（健康）归因≈先验、GO；切 v1.0（较弱）归因随失败案例重分布、ABSTAIN。
+1. `pnpm --filter @tengxiaohtx/web dev` → dt-sheet v2.0（健康）归因≈先验、GO；切 v1.0（较弱）归因随失败案例重分布、ABSTAIN。
 2. fs-doc v1.0（幻觉率破线）→ 归因偏技术、门禁 NO-GO、点名幻觉率。
-3. `pnpm --filter @kaogongsi/l4-attribution test` / `l5-decision test` 各自独立绿。
+3. `pnpm --filter @tengxiaohtx/l4-attribution test` / `l5-decision test` 各自独立绿。
 4. `pnpm e2e` 全绿（证明换成计算管道后 UI 零回归）。

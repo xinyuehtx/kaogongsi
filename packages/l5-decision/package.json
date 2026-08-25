@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/l5-decision",
+  "name": "@tengxiaohtx/l5-decision",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "echo 'lint: l5-decision (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

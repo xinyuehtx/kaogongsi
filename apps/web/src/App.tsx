@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@kaogongsi/contracts';
+import type { ComparisonView, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
 import { AppShell, Field, Select } from './components/AppShell.js';
 import { ExecDashboard } from './components/ExecDashboard.js';
 import { ComparisonReport } from './components/ComparisonReport.js';

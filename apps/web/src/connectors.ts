@@ -1,5 +1,5 @@
-import type { DataConnector } from '@kaogongsi/contracts';
-import { MockConnector, defaultKpis } from '@kaogongsi/connector-mock';
+import type { DataConnector } from '@tengxiaohtx/contracts';
+import { MockConnector, defaultKpis } from '@tengxiaohtx/connector-mock';
 
 /**
  * 连接器注册表 —— 视图按配置的 connectorId 取连接器，主动拉数据（RFC-001 §3.1/§3.2）。

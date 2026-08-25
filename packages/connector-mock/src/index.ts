@@ -11,8 +11,8 @@ import type {
   ReportQuery,
   VersionSignals,
   VersionSummary,
-} from '@kaogongsi/contracts';
-import { METRIC_CATALOG } from '@kaogongsi/contracts';
+} from '@tengxiaohtx/contracts';
+import { METRIC_CATALOG } from '@tengxiaohtx/contracts';
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 

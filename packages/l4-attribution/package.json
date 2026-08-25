@@ -1,5 +1,5 @@
 {
-  "name": "@kaogongsi/l4-attribution",
+  "name": "@tengxiaohtx/l4-attribution",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "echo 'lint: l4-attribution (placeholder)'"
   },
   "dependencies": {
-    "@kaogongsi/contracts": "workspace:*"
+    "@tengxiaohtx/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

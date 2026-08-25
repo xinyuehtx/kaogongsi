@@ -53,7 +53,7 @@ api `/report/version`、`/report/compare` 与 web `dataSource` 均改走此管�
 | AC-6 | 各层独立可测；l2/l3 纯函数无 IO（bootstrap 用种子 PRNG） | 层独立存活 |
 
 ## 4. 交付物
-- `@kaogongsi/contracts`：CanonicalSignal 扩展 + METRIC_CATALOG + ProvenanceQuery + fetchSignals
+- `@tengxiaohtx/contracts`：CanonicalSignal 扩展 + METRIC_CATALOG + ProvenanceQuery + fetchSignals
 - `packages/l2-provenance/`、`packages/l3-metrics/`（含单测）
 - `connector-mock`：fetchSignals 信号合成 + 契约测试更新
 - `apps/api`、`apps/web`：接通全管道

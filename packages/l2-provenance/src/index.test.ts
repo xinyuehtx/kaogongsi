@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CanonicalSignal } from '@kaogongsi/contracts';
+import type { CanonicalSignal } from '@tengxiaohtx/contracts';
 import { buildProvenance } from './index.js';
 
 const sig = (metricKey: string, caseId: string, verdict: CanonicalSignal['verdict'], observation: number): CanonicalSignal => ({

@@ -21,7 +21,7 @@
 ## 2. 范围
 
 ### 做（In scope）
-- **连接器标准接口**（`@kaogongsi/contracts` 内新增 `DataConnector`）：视图不关心数据从哪来，只经此接口拉。
+- **连接器标准接口**（`@tengxiaohtx/contracts` 内新增 `DataConnector`）：视图不关心数据从哪来，只经此接口拉。
 - **`packages/connector-mock`**：`MockConnector` —— 本阶段的连接器实现（返回 fixture DecisionRecord + 各 KPI）。**"本阶段 mock 数据 = 连接器的一个实现"**。
 - `packages/l6-report`：`buildExecReportView(decision, kpis) → ReportView(audience='exec')`（受众重写，T66）。
 - `apps/web`：高管 Dashboard，**渲染时经配置的连接器主动拉数据**，展示：
@@ -46,7 +46,7 @@
 
 ### 3.1 连接器标准接口（本需求的架构核心）
 ```ts
-// @kaogongsi/contracts
+// @tengxiaohtx/contracts
 export interface ConnectorCapabilities {
   evidenceLevel: EvidenceLevel;   // 该连接器能提供的最高证据级
   drillable: boolean;             // 能否下钻到证据（metric-only → false）
@@ -167,7 +167,7 @@ export interface KpiSet {
 | AC-10 | connector-mock 与 l6-report 各自独立可测可绿，互不依赖 | 层独立存活 |
 
 ## 6. 交付物
-- `@kaogongsi/contracts` 新增 `DataConnector`/`ConnectorCapabilities`/`ReportQuery`/`Kpi`/`KpiSet`
+- `@tengxiaohtx/contracts` 新增 `DataConnector`/`ConnectorCapabilities`/`ReportQuery`/`Kpi`/`KpiSet`
 - `packages/connector-mock/`（MockConnector + fixture + 单测 + 契约测试）
 - `packages/l6-report/`（buildExecReportView + 单测）
 - `apps/api` 路由 + inject 测试

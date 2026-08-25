@@ -1,4 +1,4 @@
-import type { AttributionResult, Gate, MetricDelta } from '@kaogongsi/contracts';
+import type { AttributionResult, Gate, MetricDelta } from '@tengxiaohtx/contracts';
 import type { ReactNode } from 'react';
 
 // ── 门禁 ────────────────────────────────────────────────────

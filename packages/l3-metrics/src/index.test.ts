@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CanonicalSignal, VersionSummary } from '@kaogongsi/contracts';
+import type { CanonicalSignal, VersionSummary } from '@tengxiaohtx/contracts';
 import { bootstrapStd, computeEvaluation, costOfPass, passHatK } from './index.js';
 
 const version = (evidenceLevel: VersionSummary['evidenceLevel'] = 'full'): VersionSummary => ({
