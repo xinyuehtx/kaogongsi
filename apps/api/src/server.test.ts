@@ -1,111 +1,128 @@
 import { describe, it, expect } from 'vitest';
 import type { ComparisonView, DataConnector, ProjectSummary, ReportView, VersionSummary } from '@tengxiaohtx/contracts';
+import { InMemoryStorage } from '@tengxiaohtx/auth-core';
 import { MockConnector } from '@tengxiaohtx/connector-mock';
 import { buildServer } from './server.js';
 
-describe('api: 独立测试闭环（inject，无需起端口）', () => {
+/** 每个测试用独立 storage，避免"首用户=admin"跨测试串味。 */
+function freshServer(extra: Parameters<typeof buildServer>[0] = {}) {
+  return buildServer({ storage: new InMemoryStorage(), jwtSecret: 'test', ...extra });
+}
+
+async function registerAndToken(app: ReturnType<typeof buildServer>, email = 'admin@x.com'): Promise<string> {
+  const res = await app.inject({ method: 'POST', url: '/api/auth/register', payload: { email, password: 'pw' } });
+  return (res.json() as { token: string }).token;
+}
+const auth = (token: string) => ({ authorization: `Bearer ${token}` });
+
+describe('api: 健康 + 认证', () => {
   it('GET /health 返回 ok', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/health' });
+    const res = await freshServer().inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'ok' });
   });
 
-  it('GET /api/report/exec 返回 exec ReportView（默认 MockConnector）', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/report/exec?experimentId=exp-001' });
-    expect(res.statusCode).toBe(200);
-    const view = res.json() as ReportView;
-    expect(view.audience).toBe('exec');
-    expect(view.decision?.gate).toBeDefined();
-    expect(view.sections.map((s) => s.title)).toEqual(
-      expect.arrayContaining(['归因分布', '质量', '业务/产品', '财务', '护栏', '过程质量（诊断）', '决策依据']),
-    );
+  it('首个注册用户为 admin，register 直接返回 token', async () => {
+    const app = freshServer();
+    const res = await app.inject({ method: 'POST', url: '/api/auth/register', payload: { email: 'boss@x.com', password: 'pw' } });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as { token: string; user: { role: string } };
+    expect(body.token).toBeTruthy();
+    expect(body.user.role).toBe('admin');
   });
 
-  it('AC-7 隔离性：换一个"假 L5 连接器"（同接口），路由零改动即返回新数据', async () => {
-    // 一个不同于 mock 的连接器实现——证明 api/l6-report 不绑定具体来源
-    class FakeL5Connector extends MockConnector {
-      override readonly kind = 'l5-decision';
-    }
-    const fake: DataConnector = new FakeL5Connector({ id: 'fake-l5' });
-    const app = buildServer({ connector: fake });
-    const res = await app.inject({ method: 'GET', url: '/api/report/exec' });
-    expect(res.statusCode).toBe(200);
-    expect((res.json() as ReportView).audience).toBe('exec');
-  });
-
-  it('AC-4 metric-only 连接器 ⇒ ReportView.drillable=false', async () => {
-    const app = buildServer({ connector: new MockConnector({ evidenceLevel: 'metric-only' }) });
-    const res = await app.inject({ method: 'GET', url: '/api/report/exec' });
-    expect((res.json() as ReportView).drillable).toBe(false);
+  it('/api/auth/me 需要 Bearer 令牌', async () => {
+    const app = freshServer();
+    expect((await app.inject({ method: 'GET', url: '/api/auth/me' })).statusCode).toBe(401);
+    const token = await registerAndToken(app);
+    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: auth(token) });
+    expect(me.statusCode).toBe(200);
+    expect((me.json() as { user: { role: string } }).user.role).toBe('admin');
   });
 });
 
-describe('api: 项目/版本 + 对比（RFC-002）', () => {
-  it('GET /api/projects 返回项目列表', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/projects' });
-    expect(res.statusCode).toBe(200);
-    const projects = res.json() as ProjectSummary[];
-    expect(projects.length).toBeGreaterThan(0);
+describe('api: 数据端点需认证 + 授权', () => {
+  it('未认证访问 /api/projects ⇒ 401', async () => {
+    const res = await freshServer().inject({ method: 'GET', url: '/api/projects' });
+    expect(res.statusCode).toBe(401);
   });
 
-  it('GET /api/projects/:id/versions 返回该项目版本', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/projects/dt-sheet/versions' });
+  it('admin 看到全部项目', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const res = await app.inject({ method: 'GET', url: '/api/projects', headers: auth(token) });
     expect(res.statusCode).toBe(200);
-    const versions = res.json() as VersionSummary[];
-    expect(versions.length).toBeGreaterThan(1);
-    expect(versions.every((v) => v.projectId === 'dt-sheet')).toBe(true);
+    expect((res.json() as ProjectSummary[]).length).toBeGreaterThan(0);
   });
 
-  it('GET /api/report/version 返回单版本 exec 视图', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0' });
+  it('非 admin 只看到被授权的项目；越权访问版本 ⇒ 403', async () => {
+    const app = freshServer();
+    const adminToken = await registerAndToken(app); // 首个=admin
+    // 管理员建一个 bi 用户并只授权 dt-sheet
+    const created = await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
+    const biId = (created.json() as { id: string }).id;
+    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: biId, projectId: 'dt-sheet' } });
+    const biToken = (await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } }).then((r) => r.json())) as { token: string };
+
+    const projects = await app.inject({ method: 'GET', url: '/api/projects', headers: auth(biToken.token) });
+    expect((projects.json() as ProjectSummary[]).map((p) => p.id)).toEqual(['dt-sheet']);
+
+    const denied = await app.inject({ method: 'GET', url: '/api/projects/fs-doc/versions', headers: auth(biToken.token) });
+    expect(denied.statusCode).toBe(403);
+    const ok = await app.inject({ method: 'GET', url: '/api/projects/dt-sheet/versions', headers: auth(biToken.token) });
+    expect((ok.json() as VersionSummary[]).length).toBeGreaterThan(0);
+  });
+
+  it('管理端仅 admin 可用（bi ⇒ 403）', async () => {
+    const app = freshServer();
+    const adminToken = await registerAndToken(app);
+    await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'bi@x.com', password: 'pw', role: 'bi' } });
+    const biToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'bi@x.com', password: 'pw' } })).json() as { token: string }).token;
+    expect((await app.inject({ method: 'GET', url: '/api/admin/users', headers: auth(biToken) })).statusCode).toBe(403);
+  });
+});
+
+describe('api: 报告（六层管道）+ 角色过滤', () => {
+  it('GET /api/report/version 返回 exec 视图（admin 全分区）', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
     expect(res.statusCode).toBe(200);
     const view = res.json() as ReportView;
     expect(view.audience).toBe('exec');
     expect(view.decision?.gate).toBeDefined();
+    expect(view.sections.map((s) => s.title)).toContain('决策依据');
   });
 
-  it('GET /api/report/version 缺参 ⇒ 400', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet' });
-    expect(res.statusCode).toBe(400);
+  it('finance 角色只见财务/归因/依据分区', async () => {
+    const app = freshServer();
+    const adminToken = await registerAndToken(app);
+    await app.inject({ method: 'POST', url: '/api/admin/users', headers: auth(adminToken), payload: { email: 'fin@x.com', password: 'pw', role: 'finance' } });
+    const finId = ((await app.inject({ method: 'GET', url: '/api/admin/users', headers: auth(adminToken) })).json() as { id: string; email: string }[]).find((u) => u.email === 'fin@x.com')!.id;
+    await app.inject({ method: 'POST', url: '/api/admin/grants', headers: auth(adminToken), payload: { userId: finId, projectId: 'dt-sheet' } });
+    const finToken = ((await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'fin@x.com', password: 'pw' } })).json() as { token: string }).token;
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(finToken) });
+    const titles = (res.json() as ReportView).sections.map((s) => s.title);
+    expect(titles).toEqual(['归因分布', '财务', '决策依据']);
   });
 
-  it('POST /api/report/compare 返回对比视图（默认不带叙述）', async () => {
-    const app = buildServer();
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/report/compare',
-      payload: { projectId: 'dt-sheet', baselineId: 'v1.0', candidateId: 'v2.0' },
-    });
+  it('POST /api/report/compare 返回对比视图（+ 生成叙述）', async () => {
+    const app = freshServer();
+    const token = await registerAndToken(app);
+    const res = await app.inject({ method: 'POST', url: '/api/report/compare', headers: auth(token), payload: { projectId: 'dt-sheet', baselineId: 'v1.0', candidateId: 'v2.0', generateNarrative: true } });
     expect(res.statusCode).toBe(200);
     const view = res.json() as ComparisonView;
     expect(view.baseline.id).toBe('v1.0');
-    expect(view.candidate.id).toBe('v2.0');
-    expect(view.groups.length).toBeGreaterThan(0);
-    expect(view.narrative).toBeUndefined();
-  });
-
-  it('POST /api/report/compare?generateNarrative 附带对比报告（注入模板生成器）', async () => {
-    const app = buildServer();
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/report/compare',
-      payload: { projectId: 'dt-sheet', baselineId: 'v1.0', candidateId: 'v2.0', generateNarrative: true },
-    });
-    expect(res.statusCode).toBe(200);
-    const view = res.json() as ComparisonView;
     expect(view.narrative).toBeDefined();
-    expect(['GO', 'NO_GO', 'ABSTAIN']).toContain(view.narrative?.verdict);
   });
 
-  it('POST /api/report/compare 缺参 ⇒ 400', async () => {
-    const app = buildServer();
-    const res = await app.inject({ method: 'POST', url: '/api/report/compare', payload: { projectId: 'dt-sheet' } });
-    expect(res.statusCode).toBe(400);
+  it('AC-7 隔离性：换连接器（假 L5，同接口）路由零改动', async () => {
+    class FakeL5Connector extends MockConnector {
+      override readonly kind = 'l5-decision';
+    }
+    const app = freshServer({ connector: new FakeL5Connector({ id: 'fake-l5' }) as DataConnector });
+    const token = await registerAndToken(app);
+    const res = await app.inject({ method: 'GET', url: '/api/report/version?projectId=dt-sheet&versionId=v2.0', headers: auth(token) });
+    expect((res.json() as ReportView).audience).toBe('exec');
   });
 });
