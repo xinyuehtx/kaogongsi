@@ -1,0 +1,52 @@
+name: Deploy GitHub Pages
+
+# 构建 web（pages 站点模式 + local 演示态）并发布到 GitHub Pages。
+# 需在仓库 Settings → Pages 选择 "GitHub Actions" 作为来源。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build site (pages + demo mode)
+        env:
+          VITE_SITE_MODE: pages
+          VITE_DATA_MODE: local
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: pnpm --filter @tengxiaohtx/web build
+      - name: SPA fallback (404 = index)
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
