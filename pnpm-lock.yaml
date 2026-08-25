@@ -22,7 +22,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../../kernel/contracts
       '@tengxiaohtx/ingest':
         specifier: workspace:*
         version: link:../../middleware/ingest
@@ -41,7 +41,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -60,7 +60,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -73,10 +73,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../../middleware/plugin-core
+        version: link:../contracts
       ai:
         specifier: ^4.0.0
         version: 4.3.19(react@19.2.8)(zod@3.25.76)
@@ -101,7 +98,7 @@ importers:
         version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../contracts
       '@tengxiaohtx/ingest':
         specifier: workspace:*
         version: link:../../middleware/ingest
@@ -150,11 +147,20 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
+
+  kernel/contracts:
+    devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -172,10 +178,7 @@ importers:
         version: link:../auth-core
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
-      '@tengxiaohtx/plugin-core':
-        specifier: workspace:*
-        version: link:../../middleware/plugin-core
+        version: link:../contracts
       '@tengxiaohtx/run-store':
         specifier: workspace:*
         version: link:../run-store
@@ -200,7 +203,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -225,7 +228,7 @@ importers:
         version: link:../../connectors/mock
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../../middleware/contracts
+        version: link:../contracts
       '@tengxiaohtx/metrics':
         specifier: workspace:*
         version: link:../../middleware/metrics
@@ -271,7 +274,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -284,16 +287,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)
-
-  middleware/contracts:
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -306,7 +300,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -319,7 +313,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
     devDependencies:
       '@tengxiaohtx/metrics':
         specifier: workspace:*
@@ -338,7 +332,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
       '@tengxiaohtx/provenance':
         specifier: workspace:*
         version: link:../provenance
@@ -357,7 +351,7 @@ importers:
         version: link:../attribution
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
       '@tengxiaohtx/decision':
         specifier: workspace:*
         version: link:../decision
@@ -379,10 +373,13 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
       '@tengxiaohtx/ingest':
         specifier: workspace:*
         version: link:../ingest
+      '@tengxiaohtx/persistence':
+        specifier: workspace:*
+        version: link:../../kernel/persistence
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -395,7 +392,7 @@ importers:
     dependencies:
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -411,7 +408,7 @@ importers:
         version: link:../attribution
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
       '@tengxiaohtx/decision':
         specifier: workspace:*
         version: link:../decision
@@ -430,7 +427,7 @@ importers:
         version: link:../compare
       '@tengxiaohtx/contracts':
         specifier: workspace:*
-        version: link:../contracts
+        version: link:../../kernel/contracts
     devDependencies:
       typescript:
         specifier: ^5.7.0

@@ -1,13 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CanonicalSignal, Kpi, LlmProvider, MetricDef } from '@tengxiaohtx/contracts';
-import {
-  InMemoryDocumentStore,
-  InMemoryKvStore,
-  PluginDataService,
-  PluginHost,
-  validateInput,
-  type Plugin,
-} from './index.js';
+import { InMemoryDocumentStore, InMemoryKvStore } from '@tengxiaohtx/persistence';
+import { PluginDataService, PluginHost, validateInput, type Plugin } from './index.js';
 
 const METRIC: MetricDef = { key: 'human_rating', label: '人工评分', unit: '分', group: 'quality', betterWhen: 'higher', target: 4 };
 const fakeProvider: LlmProvider = { id: 'fake-llm', async generateText() { return 'ok'; } };

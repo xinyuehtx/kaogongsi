@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import type { ProjectGrant, Role, StoragePort, User } from '@tengxiaohtx/auth-core';
-import type { DocumentStore } from '@tengxiaohtx/plugin-core';
+import type { DocumentStore } from './ports.js';
 import type {
   ConnectorVersionRecord,
   RunLayerRecord,

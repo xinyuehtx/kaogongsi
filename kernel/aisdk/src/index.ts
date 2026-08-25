@@ -1,10 +1,12 @@
 import { generateText, type LanguageModel } from 'ai';
 import type { LlmGenerateOptions, LlmProvider } from '@tengxiaohtx/contracts';
-import type { Plugin } from '@tengxiaohtx/plugin-core';
 
 /**
- * L2 LLM Provider 插件：用 Vercel AI SDK（`ai`）驱动任意模型。
+ * 内核 · LLM 适配器：用 Vercel AI SDK（`ai`）驱动任意模型，实现内核端口 `LlmProvider`。
  * 部署把一个 LanguageModel（如 `openai('gpt-4o-mini')` 来自 @ai-sdk/openai）注入即可。
+ *
+ * 内核不依赖 middleware/connectors：把本 provider **包装成插件**（Plugin）属组装层职责，
+ * 由 `example/app` 完成（RFC-011）。
  *
  * ⚠️ 运行需真实模型 + 网络/密钥；本仓库仅编译校验，不做在线调用。
  */
@@ -24,16 +26,4 @@ export class AiSdkProvider implements LlmProvider {
     });
     return text;
   }
-}
-
-/** 包装成插件（L2）。deployment：`aiSdkPlugin(openai('gpt-4o-mini'))`。 */
-export function aiSdkPlugin(lm: LanguageModel, opts?: { id?: string; model?: string }): Plugin {
-  const provider = new AiSdkProvider(lm, opts);
-  return {
-    id: `aisdk:${provider.id}`,
-    name: 'Vercel AI SDK Provider',
-    version: '1.0.0',
-    layers: ['L2'],
-    llmProviders: [provider],
-  };
 }

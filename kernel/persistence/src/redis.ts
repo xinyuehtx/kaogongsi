@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import type { KvStore } from '@tengxiaohtx/plugin-core';
+import type { KvStore } from './ports.js';
 
 /**
  * 防腐层 · Redis 缓存适配器：实现插件 KvStore（带 TTL）。

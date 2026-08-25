@@ -5,7 +5,12 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
@@ -19,7 +24,6 @@
   "dependencies": {
     "@tengxiaohtx/contracts": "workspace:*",
     "@tengxiaohtx/auth-core": "workspace:*",
-    "@tengxiaohtx/plugin-core": "workspace:*",
     "@tengxiaohtx/run-store": "workspace:*",
     "@prisma/client": "^6.1.0",
     "ioredis": "^5.4.0"

@@ -1,63 +1,11 @@
+import type { DocumentStore, KvStore } from '@tengxiaohtx/persistence';
 import type { StorageField, StorageSchema, UiField, UiForm } from './types.js';
 
 /**
- * 存储端口（RFC-007）：用户经 UI DSL 输入的数据入库。
- *  - DocumentStore：文档存储（NoSQL，如 Mongo）——权威存储。
- *  - KvStore：键值（Redis）——带 TTL 的缓存。
- * 默认内存实现（测试/自包含）；生产换 Mongo/Redis 适配器，上层零改动。
+ * 插件输入入库服务：按插件声明的 StorageSchema 把用户经 UI DSL 输入的数据写入存储。
+ * **存储端口在内核**（`@tengxiaohtx/persistence` 的 DocumentStore/KvStore）；本层只用端口，
+ * 不知道背后是内存还是 Postgres/Redis（防腐层，RFC-010/011）。
  */
-export interface DocumentStore {
-  put(collection: string, id: string, doc: Record<string, unknown>): Promise<void>;
-  get(collection: string, id: string): Promise<Record<string, unknown> | undefined>;
-  list(collection: string): Promise<Record<string, unknown>[]>;
-  delete(collection: string, id: string): Promise<void>;
-}
-
-export interface KvStore {
-  set(key: string, value: string, ttlSeconds?: number): Promise<void>;
-  get(key: string): Promise<string | undefined>;
-  del(key: string): Promise<void>;
-}
-
-export class InMemoryDocumentStore implements DocumentStore {
-  private readonly cols = new Map<string, Map<string, Record<string, unknown>>>();
-  private col(c: string): Map<string, Record<string, unknown>> {
-    const m = this.cols.get(c) ?? new Map();
-    this.cols.set(c, m);
-    return m;
-  }
-  async put(collection: string, id: string, doc: Record<string, unknown>): Promise<void> {
-    this.col(collection).set(id, doc);
-  }
-  async get(collection: string, id: string): Promise<Record<string, unknown> | undefined> {
-    return this.col(collection).get(id);
-  }
-  async list(collection: string): Promise<Record<string, unknown>[]> {
-    return [...this.col(collection).values()];
-  }
-  async delete(collection: string, id: string): Promise<void> {
-    this.col(collection).delete(id);
-  }
-}
-
-export class InMemoryKvStore implements KvStore {
-  private readonly map = new Map<string, { v: string; exp?: number }>();
-  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    this.map.set(key, { v: value, exp: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined });
-  }
-  async get(key: string): Promise<string | undefined> {
-    const e = this.map.get(key);
-    if (!e) return undefined;
-    if (e.exp !== undefined && e.exp < Date.now()) {
-      this.map.delete(key);
-      return undefined;
-    }
-    return e.v;
-  }
-  async del(key: string): Promise<void> {
-    this.map.delete(key);
-  }
-}
 
 function coerce(type: StorageField['type'], value: unknown): unknown {
   switch (type) {
@@ -79,7 +27,7 @@ function safeJson(s: string): unknown {
   }
 }
 
-/** 依据插件声明的 StorageSchema，把用户输入写入 NoSQL（+ 可选 Redis 缓存）。 */
+/** 依据插件声明的 StorageSchema，把用户输入写入文档存储（+ 可选 KV 缓存）。 */
 export class PluginDataService {
   constructor(
     private readonly schemas: () => StorageSchema[],

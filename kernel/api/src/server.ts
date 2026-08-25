@@ -16,14 +16,9 @@ import {
   type Logger,
   type RunStore,
 } from '@tengxiaohtx/run-store';
-import {
-  InMemoryDocumentStore,
-  InMemoryKvStore,
-  PluginDataService,
-  PluginHost,
-} from '@tengxiaohtx/plugin-core';
+import { PluginDataService, PluginHost } from '@tengxiaohtx/plugin-core';
 import { defaultPlugins } from '@tengxiaohtx/plugin-example';
-import { createPersistence } from '@tengxiaohtx/persistence';
+import { InMemoryDocumentStore, InMemoryKvStore, createPersistence } from '@tengxiaohtx/persistence';
 import {
   FileStorage,
   InMemoryStorage,

@@ -1,9 +1,10 @@
 import type { StoragePort } from '@tengxiaohtx/auth-core';
-import type { DocumentStore, KvStore } from '@tengxiaohtx/plugin-core';
+import type { DocumentStore, KvStore } from './ports.js';
 import type { RunStore } from '@tengxiaohtx/run-store';
 import { PrismaAuthStorage, PrismaDocumentStore, PrismaRunStore, getPrisma } from './prisma.js';
 import { RedisKvStore, createRedis } from './redis.js';
 
+export * from './ports.js';
 export * from './prisma.js';
 export * from './redis.js';
 

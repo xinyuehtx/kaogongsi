@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src/**/*"],
-  "references": [{ "path": "../contracts" }, { "path": "../attribution" }, { "path": "../decision" }]
+  "references": [{ "path": "../../kernel/contracts" }, { "path": "../attribution" }, { "path": "../decision" }]
 }

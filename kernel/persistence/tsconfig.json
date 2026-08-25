@@ -1,11 +1,24 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": ["node"] },
-  "include": ["src/**/*"],
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
   "references": [
-    { "path": "../../middleware/contracts" },
-    { "path": "../auth-core" },
-    { "path": "../../middleware/plugin-core" },
-    { "path": "../run-store" }
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../auth-core"
+    },
+    {
+      "path": "../run-store"
+    }
   ]
 }

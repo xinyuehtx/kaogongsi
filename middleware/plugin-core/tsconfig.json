@@ -1,6 +1,21 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "include": ["src/**/*"],
-  "references": [{ "path": "../contracts" }, { "path": "../ingest" }]
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../../kernel/contracts"
+    },
+    {
+      "path": "../ingest"
+    },
+    {
+      "path": "../../kernel/persistence"
+    }
+  ]
 }
