@@ -79,7 +79,7 @@ export async function createIngestConnector(config: IngestConnectorConfig): Prom
         note: `${trajs.length} 条轨迹`,
       };
       versions.push(version);
-      signalsByVersion.set(`${pid}/${vid}`, { version, signals: trajectoriesToSignals(version, trajs) });
+      signalsByVersion.set(`${pid}/${vid}`, { version, signals: trajectoriesToSignals(version, trajs, config.mapping ?? {}) });
     }
     versions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)); // 最新在前
     versionsByProject.set(pid, versions);

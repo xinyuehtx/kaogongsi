@@ -50,6 +50,12 @@ export function ExecDashboard({ view }: { view: ReportView }) {
   const gate = view.decision?.gate ?? 'ABSTAIN';
   const section = (title: string) => view.sections.find((s) => s.title === title);
   const kpi = (t: string) => (section(t)?.data as Kpi[]) ?? [];
+  const stratified = section('分层指标（诊断）')?.data as
+    | {
+        note: string;
+        metrics: { key: string; label: string; unit: string; overall: number; betterWhen?: 'higher' | 'lower'; worstGap: number; strata: { key: string; value: number; nSamples: number }[] }[];
+      }
+    | undefined;
   const traj = section('过程质量（诊断）')?.data as
     | { note: string; groups: { key: string; label: string; items: Kpi[] }[] }
     | undefined;
@@ -94,6 +100,54 @@ export function ExecDashboard({ view }: { view: ReportView }) {
         <KpiGroup name="financial" title="财务" items={kpi('财务')} />
         <KpiGroup name="guardrail" title="护栏（不能变差）" items={kpi('护栏')} hint="破线标红即刻可见" />
       </Card>
+
+      {/* 分层指标（诊断）：整体值可能掩盖某层的严重问题（T56 / RFC-012） */}
+      {stratified && stratified.metrics.length > 0 && (
+        <Card className="p-5">
+          <section data-testid="stratified-section">
+            <SectionTitle hint={stratified.note}>分层指标（诊断）</SectionTitle>
+            <div className="flex flex-col gap-3">
+              {stratified.metrics.map((m) => {
+                const lower = (m.betterWhen ?? 'higher') === 'lower';
+                const worst = lower
+                  ? Math.max(...m.strata.map((s) => s.value))
+                  : Math.min(...m.strata.map((s) => s.value));
+                return (
+                  <div key={m.key} data-testid={`stratified-${m.key}`} className="rounded-xl border border-hairline bg-surface px-3.5 py-3">
+                    <div className="flex flex-wrap items-baseline gap-2 text-sm">
+                      <span className="text-primary">{m.label}</span>
+                      <span className="tnum text-secondary">整体 {m.overall}{m.unit}</span>
+                      {m.worstGap > 0 && (
+                        <span className="rounded-pill bg-warning/20 px-1.5 text-[10px] text-[#7a5200]">
+                          最差层相差 {m.worstGap}{m.unit}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {m.strata.map((s) => {
+                        const isWorst = s.value === worst && m.strata.length > 1;
+                        return (
+                          <span
+                            key={s.key}
+                            data-testid={`stratum-${m.key}-${s.key}`}
+                            className={`inline-flex items-baseline gap-1 rounded-lg border px-2 py-1 text-xs tnum ${
+                              isWorst ? 'border-critical text-critical' : 'border-hairline text-secondary'
+                            }`}
+                          >
+                            <b>{s.key}</b>
+                            {s.value}{m.unit}
+                            <span className="text-muted">n={s.nSamples}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </Card>
+      )}
 
       {/* 过程质量（诊断，可折叠） */}
       {traj && (

@@ -74,3 +74,38 @@ describe('l4-attribution: buildAttribution（TDD）', () => {
     expect(sum).toBeCloseTo(1, 5);
   });
 });
+
+// ── RFC-012：反事实验证（充分性检验）────────────────────────────
+describe('attribution(RFC-012): 反事实验证', () => {
+  it('单因主导（技术占 80%）⇒ 该方 counterfactualVerified=true，其余 false', () => {
+    const r = buildAttribution(
+      evalWith([
+        bundle('hallucination', ['fail', 'fail', 'fail', 'fail']), // tech concern 4
+        bundle('adoption', ['fail', 'pass', 'pass', 'pass']), // product concern 1
+      ]),
+    );
+    const tech = r.distribution.find((s) => s.party === 'tech');
+    const product = r.distribution.find((s) => s.party === 'product');
+    expect(tech?.counterfactualVerified).toBe(true); // 残余 1/5 = 20% ≤ 20%
+    expect(product?.counterfactualVerified).toBe(false); // 残余 4/5 = 80%
+    expect(r.counterfactualMethod).toContain('充分性检验');
+  });
+
+  it('双因并存（各 50%）⇒ 任一方都不被标注（不把相关当因果）', () => {
+    const r = buildAttribution(
+      evalWith([
+        bundle('hallucination', ['fail', 'fail', 'pass', 'pass']), // tech 2
+        bundle('adoption', ['fail', 'fail', 'pass', 'pass']), // product 2
+      ]),
+    );
+    for (const s of r.distribution) expect(s.counterfactualVerified).toBe(false);
+  });
+
+  it('无失败（先验分布）⇒ 不做反事实标注（无问题可"修"）', () => {
+    const r = buildAttribution(
+      evalWith([bundle('success_rate', ['pass', 'pass']), bundle('adoption', ['pass', 'pass'])]),
+    );
+    for (const s of r.distribution) expect(s.counterfactualVerified).toBeUndefined();
+    expect(r.counterfactualMethod).toBeUndefined();
+  });
+});

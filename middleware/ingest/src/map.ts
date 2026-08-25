@@ -13,6 +13,23 @@ export interface IngestMapping {
   projectFrom?: (t: ParsedTrajectory) => string;
   versionFrom?: (t: ParsedTrajectory) => string;
   projectName?: (projectId: string) => string;
+  /** 分层标签来源（RFC-012）；缺省认约定式 tag：`stratum:x` / `difficulty:x` / `tier:x`。 */
+  stratumFrom?: (t: ParsedTrajectory) => string | undefined;
+}
+
+/** 约定式分层标签：tag 形如 `difficulty:hard`，或 metadata.stratum/difficulty。 */
+const STRATUM_TAG = /^(?:stratum|difficulty|tier):(.+)$/;
+export function defaultStratumFrom(t: ParsedTrajectory): string | undefined {
+  for (const tag of t.tags) {
+    const m = STRATUM_TAG.exec(tag);
+    if (m) return m[1];
+  }
+  const meta = t.metadata as Record<string, unknown>;
+  for (const k of ['stratum', 'difficulty', 'tier']) {
+    const v = meta?.[k];
+    if (typeof v === 'string' && v) return v;
+  }
+  return undefined;
 }
 
 const basename = (p: string): string => p.split(/[/\\]/).filter(Boolean).pop() ?? p;
@@ -32,19 +49,57 @@ function baseSignal(version: VersionSummary, t: ParsedTrajectory) {
 }
 
 /** 一个版本的一批轨迹 → CanonicalSignal[]。 */
-export function trajectoriesToSignals(version: VersionSummary, trajectories: ParsedTrajectory[]): CanonicalSignal[] {
+export function trajectoriesToSignals(
+  version: VersionSummary,
+  trajectories: ParsedTrajectory[],
+  mapping: IngestMapping = {},
+): CanonicalSignal[] {
   const signals: CanonicalSignal[] = [];
+
+  /** 逻辑用例键：有 caseKey 则同一用例的多次运行可被 L3 识别为重复运行（实测 pass^k，RFC-012）。 */
+  const caseIdFor = (t: ParsedTrajectory, metric: string): string => `${t.caseKey ?? t.id}:${metric}`;
+  /** 分层标签（RFC-012）：约定式 tag（difficulty:hard 等），可由 mapping.stratumFrom 覆盖。 */
+  const stratumOf = mapping.stratumFrom ?? defaultStratumFrom;
 
   // 1) success_rate：逐案例（仅有结果的轨迹）
   for (const t of trajectories) {
     if (t.verdict === 'unknown') continue;
     signals.push({
       ...baseSignal(version, t),
-      caseId: `${t.id}:success_rate`,
+      caseId: caseIdFor(t, 'success_rate'),
       metricKey: 'success_rate',
       observation: t.verdict === 'pass' ? 1 : 0,
       verdict: t.verdict,
+      stratum: stratumOf(t),
       evidence: { costUsd: t.costUsd, tokens: t.tokens, trajectoryEvents: t.steps },
+    });
+  }
+
+  // 1b) 真实成本分布（RFC-012）：逐案例成本 → L3 按 cost_per_pass 聚合出 Cost-of-Pass
+  for (const t of trajectories) {
+    if (typeof t.costUsd !== 'number' || t.verdict === 'unknown') continue;
+    signals.push({
+      ...baseSignal(version, t),
+      caseId: caseIdFor(t, 'cost_of_pass'),
+      metricKey: 'cost_of_pass',
+      observation: t.costUsd,
+      verdict: t.verdict,
+      stratum: stratumOf(t),
+      evidence: { costUsd: t.costUsd },
+    });
+  }
+
+  // 1c) 真实延迟分布（RFC-012）：逐案例耗时（ms→min）→ L3 算 p50/p95/p99
+  for (const t of trajectories) {
+    if (typeof t.latencyMs !== 'number') continue;
+    signals.push({
+      ...baseSignal(version, t),
+      caseId: caseIdFor(t, 'latency_p95'),
+      metricKey: 'latency_p95',
+      observation: round2(t.latencyMs / 60000),
+      verdict: 'unknown',
+      stratum: stratumOf(t),
+      evidence: {},
     });
   }
 
@@ -85,11 +140,7 @@ export function trajectoriesToSignals(version: VersionSummary, trajectories: Par
     evidence: {},
   });
 
-  const costs = trajectories.map((t) => t.costUsd).filter((c): c is number => typeof c === 'number');
-  const passes = trajectories.filter((t) => t.verdict === 'pass').length;
-  if (costs.length > 0 && passes > 0) {
-    signals.push(aggSignal('cost_of_pass', round2(costs.reduce((a, b) => a + b, 0) / passes)));
-  }
+  // 注：cost_of_pass 已由 1b 的逐案例成本信号交给 L3 聚合（真实分布），不再在此汇总。
   const toks = trajectories.map((t) => t.tokens).filter((x): x is number => typeof x === 'number');
   if (toks.length > 0) signals.push(aggSignal('token_efficiency', Math.round(toks.reduce((a, b) => a + b, 0) / toks.length)));
 

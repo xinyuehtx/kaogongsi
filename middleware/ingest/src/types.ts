@@ -56,6 +56,8 @@ export interface ParsedTrajectory {
   model?: string;
   projectHint?: string; // 项目映射线索（repo/cwd/project）
   versionHint?: string; // 版本映射线索（git_sha/version/model）
+  caseKey?: string; // 逻辑用例标识（case_id/task_id…）——同一用例多次运行可算实测 pass^k（RFC-012）
+  latencyMs?: number; // 端到端耗时（用于延迟分位数，RFC-012）
   tags: string[];
   createdAt?: string;
   verdict: Verdict; // 结果（有 scorer/outcome 才非 unknown）

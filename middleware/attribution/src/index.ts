@@ -108,6 +108,21 @@ export function buildAttribution(evaluation: VersionEvaluation): AttributionResu
 
   const distribution = normalize(raw);
 
+  /**
+   * 反事实验证（RFC-012，REFLECT 式**充分性检验**，T57）：
+   * 假设"修好某责任方"（把其失败案例视为通过），若**残余问题 ≤ 20%**，
+   * 说明该方单独就能解释绝大部分问题 → 因果充分，标 counterfactualVerified。
+   * 双因并存时任一方都不会被标注（各自残余 ~50%），避免把"相关"当"因果"。
+   * ⚠️ 这是**数据级**反事实，不是重跑执行器；真正的 REFLECT 重跑需执行层（后续）。
+   */
+  const RESIDUAL_MAX = 0.2;
+  if (totalConcern > 0) {
+    for (const share of distribution) {
+      const residual = (totalConcern - acc[share.party].concern) / totalConcern;
+      share.counterfactualVerified = residual <= RESIDUAL_MAX;
+    }
+  }
+
   // 置信度：metric-only 封顶 low；无失败按先验 medium；有明确集中主因 high。
   const maxShare = distribution.reduce((m, s) => Math.max(m, s.share), 0);
   const confidence: AttributionResult['confidence'] = metricOnly
@@ -118,5 +133,13 @@ export function buildAttribution(evaluation: VersionEvaluation): AttributionResu
         ? 'high'
         : 'medium';
 
-  return { distribution, confidence, drillable: !metricOnly };
+  return {
+    distribution,
+    confidence,
+    drillable: !metricOnly,
+    counterfactualMethod:
+      totalConcern > 0
+        ? `数据级充分性检验：修复该方后残余问题 ≤ ${RESIDUAL_MAX * 100}% 即视为因果充分（非重跑执行器）`
+        : undefined,
+  };
 }

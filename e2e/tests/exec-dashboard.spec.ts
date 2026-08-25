@@ -52,3 +52,17 @@ test('过程质量为诊断（可折叠）+ Right Tool Rate 标信号非门禁 +
   await expect(page.getByTestId('kpi-right_tool_rate').getByTestId('signal-only-tag')).toBeVisible();
   await expect(page.getByTestId('counter-evidence')).toContainText('留存');
 });
+
+test('分层指标（RFC-012）：整体 72% 但 hard 层显著更差，最差层标红', async ({ page }) => {
+  await page.goto('/?connector=mock');
+  await loginAdmin(page);
+  const section = page.getByTestId('stratified-section');
+  await expect(section).toBeVisible();
+  // 任务成功率按 easy/medium/hard 分层
+  await expect(page.getByTestId('stratified-success_rate')).toContainText('整体 72%');
+  await expect(page.getByTestId('stratum-success_rate-easy')).toContainText('easy');
+  const hard = page.getByTestId('stratum-success_rate-hard');
+  await expect(hard).toBeVisible();
+  // hard 是最差层 → 标红（border-critical/text-critical）
+  await expect(hard).toHaveClass(/critical/);
+});

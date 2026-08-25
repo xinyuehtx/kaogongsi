@@ -2,8 +2,10 @@ import type {
   CanonicalSignal,
   Kpi,
   KpiSet,
+  MetricAggregation,
   MetricCaseBundle,
   MetricDef,
+  MetricStratum,
   ProvenanceCase,
   SupportingCase,
   VersionEvaluation,
@@ -60,7 +62,7 @@ export function bootstrapStd(samples: number[], seedLabel = 'seed', iters = 500)
   return Math.sqrt(variance);
 }
 
-/** pass^k 可靠性：单次通过率的 k 次幂（k 次独立全过的概率估计）。 */
+/** pass^k 可靠性：单次通过率的 k 次幂（**独立性假设**外推；仅在无重复运行数据时兜底）。 */
 export function passHatK(passRate01: number, k: number): number {
   return clamp01(passRate01) ** Math.max(1, k);
 }
@@ -70,6 +72,50 @@ export function costOfPass(costs: number[], verdicts: string[]): number {
   const total = costs.reduce((a, b) => a + b, 0);
   const passes = verdicts.filter((v) => v === 'pass').length;
   return passes === 0 ? Infinity : total / passes;
+}
+
+/** 分位数（线性插值，RFC-012）：p 取 0..100。空数组返回 0。 */
+export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const xs = [...values].sort((a, b) => a - b);
+  if (xs.length === 1) return xs[0]!;
+  const rank = (clamp01(p / 100) * (xs.length - 1));
+  const lo = Math.floor(rank);
+  const hi = Math.ceil(rank);
+  const w = rank - lo;
+  return (xs[lo] ?? 0) * (1 - w) + (xs[hi] ?? 0) * w;
+}
+
+/**
+ * pass^k 实测（RFC-012 / A4·P1）：把同一 caseId 的**多次重复运行**聚合——
+ * 一个 case 只有在 **k 次运行全部通过** 时才计入分子。k 缺省 = 实际最小重复次数。
+ * 与 `passHatK`（幂次外推）相对：这里不假设独立性，直接看实测一致性。
+ * 返回 undefined 表示没有重复运行数据（应回落到率值或幂次外推）。
+ */
+export function passHatKFromRuns(
+  cases: { caseId: string; runId: string; verdict: string }[],
+  k?: number,
+): { value01: number; k: number; nCases: number } | undefined {
+  const byCase = new Map<string, Map<string, string>>();
+  for (const c of cases) {
+    const runs = byCase.get(c.caseId) ?? new Map<string, string>();
+    runs.set(c.runId, c.verdict);
+    byCase.set(c.caseId, runs);
+  }
+  const repeatCounts = [...byCase.values()].map((r) => r.size);
+  const maxRepeat = Math.max(0, ...repeatCounts);
+  if (maxRepeat < 2) return undefined; // 无重复运行
+  const kk = k ?? Math.min(...repeatCounts.filter((n) => n >= 2));
+  let allPass = 0;
+  let counted = 0;
+  for (const runs of byCase.values()) {
+    if (runs.size < kk) continue; // 重复次数不足的 case 不参与
+    counted += 1;
+    const verdicts = [...runs.values()].slice(0, kk);
+    if (verdicts.every((v) => v === 'pass')) allPass += 1;
+  }
+  if (counted === 0) return undefined;
+  return { value01: allPass / counted, k: kk, nCases: counted };
 }
 
 // ── 主管道：signals → provenance(L2) → metrics ──────────────────
@@ -117,6 +163,36 @@ function emptyKpiSet(): KpiSet {
   };
 }
 
+/** 按 stratum 分层聚合（同一聚合口径），无 stratum 标签则返回空。 */
+function stratify(cases: ProvenanceCase[], aggregation: MetricAggregation): MetricStratum[] {
+  const labelled = cases.filter((c) => c.stratum !== undefined);
+  if (labelled.length === 0) return [];
+  const groups = new Map<string, ProvenanceCase[]>();
+  for (const c of labelled) {
+    const key = c.stratum!;
+    groups.set(key, [...(groups.get(key) ?? []), c]);
+  }
+  const out: MetricStratum[] = [];
+  for (const [key, cs] of groups) {
+    const obs = cs.map((c) => c.observation);
+    let value: number;
+    if (aggregation === 'rate') value = round2(mean(obs) * 100);
+    else if (aggregation === 'cost_per_pass') {
+      const cop = costOfPass(obs, cs.map((c) => c.verdict));
+      value = Number.isFinite(cop) ? round2(cop) : 0;
+    } else if (aggregation.startsWith('p')) value = round2(percentile(obs, Number(aggregation.slice(1))));
+    else value = round2(mean(obs));
+    out.push({ key, value, nSamples: cs.length });
+  }
+  // 已知难度/等级层按自然序展示，其余字典序
+  const RANK = ['easy', 'simple', 'medium', 'normal', 'hard', 'expert'];
+  const rank = (k: string): number => {
+    const i = RANK.indexOf(k.toLowerCase());
+    return i < 0 ? RANK.length : i;
+  };
+  return out.sort((a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key));
+}
+
 function placeKpi(kpis: KpiSet, def: MetricDef, k: Kpi): void {
   if (isTrajectoryGroup(def.group)) {
     (kpis.trajectory as unknown as Record<string, Kpi[]>)[def.group]?.push(k);
@@ -145,12 +221,53 @@ export function computeEvaluation(
     if (cases.length === 0) continue; // 该来源未提供此指标
     const observations = cases.map((c) => c.observation);
 
-    // case-based（多个 0/1 案例）：值=均值×100 + bootstrap 区间；
-    // 单读数（BI 聚合 / metric-only）：读数即值。
-    const caseRate = def.caseBased === true && cases.length > 1;
-    const rawMean = mean(observations);
-    const value = round2(caseRate ? rawMean * 100 : rawMean);
+    // 聚合方式（RFC-012）：缺省 case-based→rate、其余→mean；
+    // cost_per_pass 用真实成本分布，p50/p95/p99 用分位数。
+    const aggregation = def.aggregation ?? (def.caseBased ? 'rate' : 'mean');
+    const multi = cases.length > 1;
+    const caseRate = aggregation === 'rate' && multi;
+
+    let value: number;
+    let distribution: Kpi['distribution'];
+    switch (multi ? aggregation : 'mean') {
+      case 'rate':
+        value = round2(mean(observations) * 100);
+        break;
+      case 'cost_per_pass': {
+        const cop = costOfPass(observations, cases.map((c) => c.verdict));
+        value = Number.isFinite(cop) ? round2(cop) : round2(observations.reduce((a, b) => a + b, 0));
+        break;
+      }
+      case 'p50':
+      case 'p95':
+      case 'p99': {
+        const p = Number(aggregation.slice(1));
+        value = round2(percentile(observations, p));
+        distribution = {
+          p50: round2(percentile(observations, 50)),
+          p95: round2(percentile(observations, 95)),
+          p99: round2(percentile(observations, 99)),
+        };
+        break;
+      }
+      default:
+        value = round2(mean(observations));
+    }
+
     const std = caseRate ? round2(bootstrapStd(observations, `${version.id}:${def.key}`) * 100) : undefined;
+
+    // pass^k 实测优先（有重复运行就不用幂次外推，A4/P1）
+    let passHatKMeasured = false;
+    if (aggregation === 'rate' && multi) {
+      const measured = passHatKFromRuns(cases);
+      if (measured) {
+        value = round2(measured.value01 * 100);
+        passHatKMeasured = true;
+      }
+    }
+
+    // 分层指标（RFC-012 / T56）：整体值可能掩盖某层的严重问题
+    const strata = stratify(cases, aggregation);
 
     const breached =
       def.guardrailThreshold !== undefined &&
@@ -169,6 +286,9 @@ export function computeEvaluation(
       guardrailBreached: def.group === 'guardrail' ? breached : undefined,
       stdDev: std,
       nSamples: cases.length,
+      distribution,
+      strata: strata.length > 1 ? strata : undefined, // 单层无意义
+      passHatKFromRuns: passHatKMeasured || undefined,
       sourceLineage: lineage,
     };
     placeKpi(kpis, def, kpi);

@@ -43,6 +43,8 @@ export function buildProvenance(signals: CanonicalSignal[]): ProvenanceQuery {
       evidenceRef: `ev:${s.caseId}`,
       lineage: s.sourceLineage,
       source: s.source,
+      runId: s.runId,
+      stratum: s.stratum,
     });
   }
   return graph;

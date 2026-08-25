@@ -64,6 +64,8 @@ const PROJECT_PATHS = ['project', 'projectName', 'repo', 'cwd', 'session.project
 const VERSION_PATHS = ['version', 'gitSha', 'git_sha', 'commit', 'gitBranch', 'extra.metadata.version', 'metadata.version'];
 const TAG_PATHS = ['tags', 'metadata.tags', 'extra.metadata.tags'];
 const TIME_PATHS = ['createdAt', 'timestamp', 'startTime', 'start_time', 'time'];
+const CASE_PATHS = ['caseId', 'case_id', 'taskId', 'task_id', 'instanceId', 'instance_id', 'sample_id', 'metadata.caseId', 'extra.metadata.case_id'];
+const LATENCY_PATHS = ['latencyMs', 'latency_ms', 'durationMs', 'duration_ms', 'elapsedMs', 'elapsed_ms', 'latency', 'duration', 'elapsed'];
 const GUARDRAIL_KEYS = ['hallucination', 'hallucinated', 'refusal', 'refused', 'safety', 'safety_violation', 'toxicity', 'pii'];
 
 function messagesOf(content: unknown, paths: string[]): unknown[] {
@@ -167,6 +169,8 @@ export function genericParse(raw: RawTrajectory, def: ParserDef): ParsedTrajecto
     versionHint: str(getCand(objs, def.versionPaths ?? VERSION_PATHS)) ?? model,
     tags,
     createdAt: str(getCand(objs, TIME_PATHS)) ?? raw.createdAt,
+    caseKey: str(getCand(objs, CASE_PATHS)),
+    latencyMs: num(getCand(objs, LATENCY_PATHS)),
     verdict: normalizeVerdict(getCand(objs, VERDICT_PATHS)),
     costUsd: num(getCand(objs, COST_PATHS)),
     tokens: num(getCand(objs, TOKEN_PATHS)) ?? sumTokens(messages),

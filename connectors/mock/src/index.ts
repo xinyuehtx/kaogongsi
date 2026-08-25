@@ -202,6 +202,9 @@ function signalsForVersion(
   const pushAgg = (def: MetricDef, value: number): void => {
     out.push({ ...meta, caseId: `${version.id}:${def.key}:agg`, metricKey: def.key, observation: value, verdict: 'unknown' });
   };
+  /** 难度分层（RFC-012 演示 T56：整体值会掩盖 hard 层的问题）。 */
+  const stratumOf = (i: number, n: number): string => (i < n / 3 ? 'easy' : i < (2 * n) / 3 ? 'medium' : 'hard');
+
   const pushCases = (def: MetricDef, value: number): void => {
     const n = def.nSamples ?? 100;
     const positives = Math.round((value / 100) * n); // higher-better=通过数；lower-better=命中(坏)数
@@ -216,6 +219,9 @@ function signalsForVersion(
         metricKey: def.key,
         observation: hit ? 1 : 0,
         verdict,
+        // 仅打标签，不改变整体取值：坏结果集中到 hard 层
+        // higher-better：低位=通过→easy；lower-better：低位=坏事件→反向映射到 hard
+        stratum: stratumOf(def.betterWhen === 'higher' ? i : n - 1 - i, n),
       });
     }
   };

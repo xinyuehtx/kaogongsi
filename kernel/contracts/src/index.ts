@@ -63,8 +63,9 @@ export interface CanonicalSignal {
   evidenceLevel: EvidenceLevel;
   // 归一化观测（RFC-004）：任何来源都把"某指标的一次观测"归一到此。
   metricKey?: string; // 该信号归属的指标
-  observation?: number; // 数值观测（case-based：1/0；aggregate：指标值）
+  observation?: number; // 数值观测（case-based：1/0；成本/延迟：原值；aggregate：指标值）
   verdict?: 'pass' | 'partial' | 'fail' | 'unknown'; // case-based 判定
+  stratum?: string; // 分层标签（难度/场景/租户…）——用于分层指标（RFC-012）
   evidence: {
     trajectoryEvents?: unknown[]; // 轨迹事件（带 parentId 因果链），L2 细化
     artifacts?: unknown[];
@@ -114,6 +115,8 @@ export interface AttributionResult {
   distribution: AttributionShare[];
   confidence: 'low' | 'medium' | 'high';
   drillable: boolean; // evidenceLevel=metric-only 时为 false
+  /** 反事实验证方法说明（RFC-012）：当前为**数据级充分性检验**，非重跑执行器。 */
+  counterfactualMethod?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -159,6 +162,12 @@ export interface Kpi {
   betterWhen?: 'higher' | 'lower'; // 变好的方向；缺省按启发式推断
   stdDev?: number; // A4：重复采样标准差（用于显著性/置信区间）
   nSamples?: number; // 样本量
+  /** 观测分布分位数（RFC-012，如延迟）：有原始分布时才给。 */
+  distribution?: { p50?: number; p95?: number; p99?: number };
+  /** 分层取值（RFC-012 / T56 分层报告）：整体值可能掩盖某层的严重问题。 */
+  strata?: MetricStratum[];
+  /** pass^k 由**多次重复运行**实测得出（而非独立性假设外推）——A4/P1。 */
+  passHatKFromRuns?: boolean;
   sourceLineage: string[];
 }
 
@@ -241,12 +250,29 @@ export type MetricGroup =
   | 'interactionQuality'
   | 'stability';
 
+/**
+ * 指标聚合方式（RFC-012）：决定 L3 如何把一批观测折成一个值。
+ *  - rate         逐实例 0/1 → 通过率×100（case-based 默认）
+ *  - mean         观测均值（聚合读数默认；单读数即该值）
+ *  - cost_per_pass 总成本 / 通过数（Cost-of-Pass，真实成本分布）
+ *  - p50 / p95 / p99  观测分布的分位数（延迟等）
+ */
+export type MetricAggregation = 'rate' | 'mean' | 'cost_per_pass' | 'p50' | 'p95' | 'p99';
+
+/** 分层指标的一层（RFC-012）：同一指标在某个切片上的取值。 */
+export interface MetricStratum {
+  key: string; // 层标签（如 hard / tenant-a）
+  value: number;
+  nSamples: number;
+}
+
 export interface MetricDef {
   key: string;
   label: string;
   unit: string;
   group: MetricGroup;
   betterWhen: 'higher' | 'lower';
+  aggregation?: MetricAggregation; // 缺省：caseBased→rate，否则 mean
   caseBased?: boolean; // true=逐实例判定（可下钻到案例），false=聚合读数（BI 式）
   diagnostic?: boolean; // 过程质量：诊断非门禁（D11/A1）
   signalOnly?: boolean;
@@ -280,14 +306,14 @@ export const METRIC_CATALOG: MetricDef[] = [
   { key: 'task_volume', label: '任务量', unit: '次/日', group: 'product', betterWhen: 'higher', target: 10000 },
   { key: 'containment', label: '自足完成率', unit: '%', group: 'product', betterWhen: 'higher', target: 75 },
   // 财务
-  { key: 'cost_of_pass', label: 'Cost-of-Pass', unit: 'USD', group: 'financial', betterWhen: 'lower', target: 0.2 },
+  { key: 'cost_of_pass', label: 'Cost-of-Pass', unit: 'USD', group: 'financial', betterWhen: 'lower', aggregation: 'cost_per_pass', target: 0.2 },
   { key: 'roi', label: 'ROI', unit: '%', group: 'financial', betterWhen: 'higher', target: 120 },
   { key: 'cost_quality', label: '成本-质量比', unit: 'USD/%', group: 'financial', betterWhen: 'lower', target: 0.28 },
   // 护栏（含阈值）
   { key: 'hallucination', label: '幻觉率', unit: '%', group: 'guardrail', betterWhen: 'lower', caseBased: true, target: 5, guardrailThreshold: 5, nSamples: 100 },
   { key: 'refusal', label: '拒答率', unit: '%', group: 'guardrail', betterWhen: 'lower', caseBased: true, target: 8, guardrailThreshold: 10, nSamples: 100 },
   { key: 'safety_violation', label: '安全违规率', unit: '%', group: 'guardrail', betterWhen: 'lower', target: 1, guardrailThreshold: 1 },
-  { key: 'latency_p95', label: 'P95 延迟', unit: 'min', group: 'guardrail', betterWhen: 'lower', target: 30, guardrailThreshold: 35 },
+  { key: 'latency_p95', label: 'P95 延迟', unit: 'min', group: 'guardrail', betterWhen: 'lower', aggregation: 'p95', target: 30, guardrailThreshold: 35 },
   // 过程质量 · 效率（诊断）
   { key: 'steps_to_success', label: 'Steps to Success', unit: '步', group: 'efficiency', betterWhen: 'lower', diagnostic: true },
   { key: 'token_efficiency', label: 'Token Efficiency', unit: 'tok/任务', group: 'efficiency', betterWhen: 'lower', diagnostic: true },
@@ -324,6 +350,8 @@ export interface ProvenanceCase {
   evidenceRef: string;
   lineage: string[];
   source: string;
+  runId: string; // 同一 caseId 的多个 runId = 重复运行（pass^k 实测，RFC-012）
+  stratum?: string; // 分层标签（RFC-012）
 }
 
 export interface ProvenanceQuery {
